@@ -1,0 +1,27 @@
+# macOS
+.DS_Store
+._*
+
+# env
+.env
+.env.*
+!.env.example
+
+# dependencies
+node_modules/
+
+# build/cache
+.next/
+dist/
+out/
+coverage/
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# TypeScript
+*.tsbuildinfo

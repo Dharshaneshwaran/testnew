@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AlertCondition {
+  ABOVE
+  BELOW
+}
+
+enum NotificationChannel {
+  EMAIL
+  WEBHOOK
+}
+
+model User {
+  id                        String                     @id @default(uuid())
+  email                     String                     @unique
+  passwordHash              String
+  name                      String?
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  watchlistFolders          WatchlistFolder[]
+  alerts                    Alert[]
+  notificationSubscriptions NotificationSubscription[]
+}
+
+model WatchlistFolder {
+  id        String          @id @default(uuid())
+  name      String
+  userId    String
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     WatchlistItem[]
+
+  @@index([userId])
+}
+
+model WatchlistItem {
+  id        String          @id @default(uuid())
+  symbol    String
+  exchange  String?
+  folderId  String
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  folder    WatchlistFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+
+  @@index([folderId])
+}
+
+model Alert {
+  id          String         @id @default(uuid())
+  userId      String
+  symbol      String
+  condition   AlertCondition
+  targetPrice Decimal        @db.Decimal(16, 4)
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model NotificationSubscription {
+  id        String              @id @default(uuid())
+  userId    String
+  channel   NotificationChannel
+  endpoint  String?
+  isActive  Boolean             @default(true)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
