@@ -122,9 +122,15 @@ export async function getSectors() {
   }));
 }
 
-export function searchMarket(query: string) {
+export async function searchMarket(query: string) {
   const params = new URLSearchParams({ q: query });
-  return apiRequest<MarketSearchItem[]>(`/market/search?${params.toString()}`);
+  const results = await apiRequest<MarketSearchItem[]>(`/market/search?${params.toString()}`);
+  return results.map(item => {
+    if (item.hint.includes("Equity") || item.hint.includes("Index") || item.hint.includes("Futures")) {
+      return { ...item, route: `/dashboard/symbol/${encodeURIComponent(item.label)}` };
+    }
+    return item;
+  });
 }
 
 export function getResearch(symbol: string) {

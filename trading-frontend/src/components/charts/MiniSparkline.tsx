@@ -23,6 +23,7 @@ export function MiniSparkline({
       layout: {
         background: { color: "transparent" },
         textColor: "#71717a",
+        attributionLogo: false,
       },
       grid: {
         vertLines: { visible: false },

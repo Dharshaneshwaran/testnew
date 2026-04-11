@@ -4,11 +4,14 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   Check,
   ChevronDown,
+  Menu,
   MessageSquareText,
   Moon,
+  Sun,
   Search,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
+import { useTransition } from "react";
 
 import { useAuth } from "@/components/auth/AuthProvider";
 import { cn } from "@/lib/utils";
@@ -34,6 +37,9 @@ export function Header({ title, subtitle }: { title: string; subtitle: string })
   const [searchError, setSearchError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<MarketSearchItem[]>([]);
   const [tickers, setTickers] = useState<Ticker[]>([]);
+  const [isBeta, setIsBeta] = useState(true);
+  const [isDark, setIsDark] = useState(true);
+  const [isPending, startTransition] = useTransition();
   const normalizedQuery = searchQuery.trim();
 
   useEffect(() => {
@@ -94,16 +100,25 @@ export function Header({ title, subtitle }: { title: string; subtitle: string })
     setSearchQuery("");
     setSuggestions([]);
 
-    if (route !== pathname) {
-      router.push(route);
-    }
+    startTransition(() => {
+      if (route !== pathname) {
+        router.push(route);
+      }
+    });
   }
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/8 bg-[#0c0d12]/95 py-4 backdrop-blur-xl">
       <div className="flex flex-col gap-4 px-2 lg:px-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4">
           <div className="flex items-center gap-4">
+            <button
+              type="button"
+              className="lg:hidden h-9 items-center gap-2 rounded-full bg-white/[0.06] px-3 text-sm text-white/90 inline-flex"
+              onClick={() => window.dispatchEvent(new Event('toggle-sidebar'))}
+            >
+              <Menu className="h-4 w-4 text-white/70" />
+            </button>
             <button
               type="button"
               className="hidden h-9 items-center gap-2 rounded-full bg-white/[0.06] px-5 text-sm text-white/90 lg:inline-flex"
@@ -120,7 +135,7 @@ export function Header({ title, subtitle }: { title: string; subtitle: string })
           </div>
 
           <div className="ml-auto flex items-center gap-3">
-            <form className="relative hidden md:block" onSubmit={handleSearch}>
+            <form className="relative flex-1 md:flex-none md:block" onSubmit={handleSearch}>
               <label className="flex h-10 w-[220px] items-center rounded-full border border-white/8 bg-white/[0.03] pl-4 pr-3 text-sm text-white/80 transition focus-within:border-white/18">
                 <Search className="h-4 w-4 text-white/55" />
                 <input
@@ -141,9 +156,11 @@ export function Header({ title, subtitle }: { title: string; subtitle: string })
                         setSearchError(null);
                         setSearchQuery("");
                         setSuggestions([]);
-                        if (item.route !== pathname) {
-                          router.push(item.route);
-                        }
+                        startTransition(() => {
+                          if (item.route !== pathname) {
+                            router.push(item.route);
+                          }
+                        });
                       }}
                       className="flex w-full items-center justify-between border-b border-white/5 px-4 py-3 text-left transition hover:bg-white/[0.04] last:border-b-0"
                     >
@@ -168,24 +185,44 @@ export function Header({ title, subtitle }: { title: string; subtitle: string })
             <div className="hidden h-7 w-px bg-white/12 lg:block" />
 
             <div className="hidden items-center rounded-full border border-white/10 bg-white/[0.02] p-1 lg:flex">
-              <button type="button" className="rounded-full px-4 py-1.5 text-sm text-white/75">
+              <button 
+                type="button" 
+                onClick={() => setIsBeta(false)}
+                className={cn(
+                  "rounded-full px-4 py-1.5 text-sm transition-colors",
+                  !isBeta ? "bg-[#1a1d27] text-[#8ee78f]" : "text-white/75"
+                )}
+              >
                 Classic
               </button>
               <button
                 type="button"
-                className="flex items-center gap-2 rounded-full bg-[#1a1d27] px-4 py-1.5 text-sm text-[#8ee78f]"
+                onClick={() => setIsBeta(true)}
+                className={cn(
+                  "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm transition-colors",
+                  isBeta ? "bg-[#1a1d27] text-[#8ee78f]" : "text-white/75"
+                )}
               >
-                <Check className="h-4 w-4" />
+                {isBeta && <Check className="h-4 w-4" />}
                 Beta
               </button>
             </div>
 
             <button
               type="button"
+              onClick={() => {
+                const nextDark = !isDark;
+                setIsDark(nextDark);
+                if (nextDark) {
+                  document.documentElement.classList.add('dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                }
+              }}
               className="hidden h-10 w-10 items-center justify-center rounded-full text-white/75 transition hover:bg-white/[0.05] lg:inline-flex"
               aria-label="Theme"
             >
-              <Moon className="h-5 w-5" />
+              {isDark ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
             </button>
             <button
               type="button"

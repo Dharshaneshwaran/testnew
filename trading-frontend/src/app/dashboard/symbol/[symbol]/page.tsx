@@ -16,9 +16,10 @@ import {
 
 import { TradingChart } from "@/components/charts/TradingChart";
 import { Header } from "@/components/layout/Header";
-import { getResearch, getTimeSeries } from "@/lib/api/market";
 import { cn } from "@/lib/utils";
 import { MarketResearch, PricePoint } from "@/types/market";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { addWatchlistItem, getWatchlistFolders, createWatchlistFolder } from "@/lib/api/watchlist";
 
 const CHART_ACTIONS = [
   { label: "Area", icon: BarChart3 },
@@ -40,14 +41,57 @@ export default function SymbolResearchPage() {
   const [activeContentTab, setActiveContentTab] =
     useState<(typeof CONTENT_TABS)[number]>("Overview");
 
+  const { token } = useAuth();
+  const [addingToList, setAddingToList] = useState(false);
+  const [added, setAdded] = useState(false);
+
+  const handleAddToList = async () => {
+    if (!token) {
+      alert("Please login to add to watchlist");
+      return;
+    }
+
+    setAddingToList(true);
+    try {
+      let folders = await getWatchlistFolders(token);
+      let targetFolderId = folders[0]?.id;
+
+      if (!targetFolderId) {
+        const defaultFolder = await createWatchlistFolder(token, "My Watchlist");
+        targetFolderId = defaultFolder.id;
+      } else {
+        const targetFolder = folders.find(f => f.id === targetFolderId);
+        if (targetFolder?.items.some(item => item.symbol === symbol)) {
+          alert("This symbol is already in your watchlist.");
+          setAdded(true);
+          return;
+        }
+      }
+
+      await addWatchlistItem(token, targetFolderId, symbol, research?.exchange);
+      setAdded(true);
+      window.dispatchEvent(new Event("watchlist-updated"));
+    } catch (error) {
+      console.error("Failed to add to watchlist:", error);
+    } finally {
+      setAddingToList(false);
+    }
+  };
+
   useEffect(() => {
     let active = true;
 
     async function load() {
       try {
         const [researchResponse, chartResponse] = await Promise.all([
-          getResearch(symbol),
-          getTimeSeries("equity", symbol, { range: "1d", interval: "30m" }),
+          getResearch(symbol).catch((err) => {
+            console.warn(err);
+            return null;
+          }),
+          getTimeSeries("equity", symbol, { range: "1d", interval: "30m" }).catch((err) => {
+            console.warn(err);
+            return [];
+          }),
         ]);
 
         if (!active) {
@@ -55,8 +99,12 @@ export default function SymbolResearchPage() {
         }
 
         setResearch(researchResponse);
-        setChartData(chartResponse);
-        setError(null);
+        setChartData(chartResponse || []);
+        if (!researchResponse && (!chartResponse || chartResponse.length === 0)) {
+          setError("Failed to load symbol data");
+        } else {
+          setError(null);
+        }
       } catch (loadError) {
         if (active) {
           setError(loadError instanceof Error ? loadError.message : "Failed to load research");
@@ -124,11 +172,16 @@ export default function SymbolResearchPage() {
 
             <button
               type="button"
-              className="inline-flex h-11 items-center gap-3 rounded-full bg-[#2a3142] px-6 text-[16px] font-medium text-white transition hover:bg-[#31394d]"
+              onClick={handleAddToList}
+              disabled={addingToList || added}
+              className={cn(
+                "inline-flex h-11 items-center gap-3 rounded-full px-6 text-[16px] font-medium transition",
+                added ? "bg-emerald-500/20 text-emerald-400" : "bg-[#2a3142] text-white hover:bg-[#31394d]"
+              )}
             >
               <Plus className="h-5 w-5" />
-              Add to list
-              <ChevronDown className="h-4 w-4 text-white/70" />
+              {addingToList ? "Adding..." : added ? "Added" : "Add to list"}
+              <ChevronDown className="h-4 w-4 opacity-70" />
             </button>
           </div>
 
@@ -140,6 +193,7 @@ export default function SymbolResearchPage() {
                   <button
                     key={action.label}
                     type="button"
+                    onClick={() => alert(`${action.label} feature coming soon`)}
                     className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-[15px] text-white/86 transition hover:bg-white/[0.04]"
                   >
                     <Icon className="h-4 w-4" />
@@ -154,6 +208,11 @@ export default function SymbolResearchPage() {
               {loading ? (
                 <div className="flex h-[334px] items-center justify-center text-sm text-white/45">
                   Loading chart...
+                </div>
+              ) : chartData.length === 0 ? (
+                <div className="flex h-[334px] flex-col items-center justify-center gap-2 text-sm text-white/45">
+                  <BarChart3 className="h-6 w-6 text-white/20" />
+                  Insufficient data for chart
                 </div>
               ) : (
                 <>
