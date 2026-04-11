@@ -68,6 +68,7 @@ export interface MarketSearchItem {
   hint: string;
   route: string;
   keywords: string[];
+  symbol?: string;
 }
 
 export async function getEquityQuote(symbol: string) {
@@ -212,13 +213,25 @@ export async function searchMarket(query: string) {
       label: stock,
       hint: "Equity",
       route: `/dashboard/symbol/${stock}`,
-      keywords: [stock]
+      keywords: [stock],
+      symbol: stock,
     }));
   }
 
+  // Add symbol mapping for indices
+  const symbolMap: Record<string, string> = {
+    "NIFTY 50": "NIFTY",
+    "BSE SENSEX": "SENSEX",
+    "NIFTY BANK": "BANKNIFTY",
+  };
+
   return results.map(item => {
     if (item.hint.includes("Equity") || item.hint.includes("Index") || item.hint.includes("Futures")) {
-      return { ...item, route: `/dashboard/symbol/${encodeURIComponent(item.label)}` };
+      return { 
+        ...item, 
+        route: `/dashboard/symbol/${encodeURIComponent(item.label)}`,
+        symbol: symbolMap[item.label] || item.symbol || item.label,
+      };
     }
     return item;
   });

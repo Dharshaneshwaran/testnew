@@ -35,12 +35,21 @@ export default function LoginPage() {
         ? await register({ email, password, name: name || undefined })
         : await login({ email, password });
 
+      console.log('Auth response:', response);
+      
+      if (!response || !response.accessToken || !response.user) {
+        throw new Error('Invalid response from server');
+      }
+      
       loginToSession(response);
+      
+      // Don't use setTimeout, just redirect immediately since loginToSession updates state synchronously
       router.push("/dashboard");
       router.refresh();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Login failed");
-    } finally {
+      const errorMessage = submitError instanceof Error ? submitError.message : "Login failed";
+      console.error('Login error:', errorMessage, submitError);
+      setError(errorMessage);
       setLoading(false);
     }
   }
@@ -117,6 +126,23 @@ export default function LoginPage() {
               ? "Already have an account? Sign in"
               : "Don't have an account? Register"}
           </button>
+
+          <div className="mt-6 rounded-lg border border-white/10 bg-white/[0.02] p-4">
+            <p className="text-xs font-semibold text-white/60 mb-2">Demo Account</p>
+            <p className="text-xs text-white/50 mb-1">Email: <span className="text-white/70 font-mono">demo@tradeboard.pro</span></p>
+            <p className="text-xs text-white/50 mb-3">Password: <span className="text-white/70 font-mono">demo1234</span></p>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail("demo@tradeboard.pro");
+                setPassword("demo1234");
+                setIsRegisterMode(false);
+              }}
+              className="mt-3 w-full text-xs px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white/80 transition"
+            >
+              Fill Demo Credentials
+            </button>
+          </div>
         </CardContent>
       </Card>
     </main>

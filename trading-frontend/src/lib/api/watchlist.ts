@@ -77,6 +77,7 @@ export async function getWatchlistFolders(token: string): Promise<WatchlistFolde
         };
 
         return {
+          id: item.id,
           symbol: item.symbol,
           exchange: normalizeExchange(item.exchange),
           ltp: quote.ltp,
@@ -129,6 +130,7 @@ export async function addWatchlistItem(
   } catch (err) {
     console.warn(`Failed to fetch quote for ${symbol} after adding:`, err);
     return {
+      id: item.id,
       symbol: item.symbol,
       exchange: normalizeExchange(item.exchange),
       ltp: 0,
@@ -138,6 +140,7 @@ export async function addWatchlistItem(
   }
 
   return {
+    id: item.id,
     symbol: item.symbol,
     exchange: normalizeExchange(item.exchange),
     ltp: quote.price,

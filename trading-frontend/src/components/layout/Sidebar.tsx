@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { WatchlistFolder } from "@/components/watchlist/WatchlistFolder";
 
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useDashboard } from "@/context/DashboardContext";
 import { MiniSparkline } from "@/components/charts/MiniSparkline";
 import { getEquityQuote, getSectors, getTimeSeries } from "@/lib/api/market";
 import { createWatchlistFolder, getWatchlistFolders, deleteAllWatchlistFolders } from "@/lib/api/watchlist";
@@ -23,6 +24,7 @@ type LiveSectorRow = {
 
 export function Sidebar() {
   const { token } = useAuth();
+  const { mode } = useDashboard();
   const [watchlistFolders, setWatchlistFolders] = useState<WatchlistFolderType[]>([]);
   const [sectorRows, setSectorRows] = useState<LiveSectorRow[]>([]);
   const [isAddingFolder, setIsAddingFolder] = useState(false);
@@ -162,144 +164,185 @@ export function Sidebar() {
           </button>
         </div>
 
-      <div className="flex items-center justify-between">
-        <div className="relative group">
-          <button 
-            type="button"
-            className="flex items-center gap-1 cursor-pointer group-hover:text-white/90 transition-colors"
-          >
-            <h2 className="text-[21px] font-medium tracking-[-0.03em] text-white">Lists</h2>
-            <ChevronDown className="h-4 w-4 text-white/50 group-hover:text-white/70" />
-          </button>
-          
-          {/* Dropdown Menu (Hidden by default, shown on group-hover for simplicity or you could add state) */}
-          <div className="absolute top-full left-0 mt-2 w-48 py-2 bg-zinc-900 border border-white/10 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-            <button className="w-full text-left px-4 py-2 text-sm text-zinc-300 hover:bg-white/10 transition-colors">
-              Manage lists
-            </button>
-            <button className="w-full text-left px-4 py-2 text-sm text-zinc-300 hover:bg-white/10 transition-colors">
-              Recently visited
-            </button>
-            <div className="my-1 h-px bg-white/5" />
-            <button 
-              onClick={handleDeleteAllFolders}
-              className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-400/10 transition-colors"
-            >
-              Delete all lists
-            </button>
-          </div>
-        </div>
-        <div className="flex items-center gap-4 text-white/72">
-          <button 
-            type="button" 
-            aria-label="New list" 
-            onClick={() => setIsAddingFolder(prev => !prev)}
-            className={cn("hover:text-white transition-colors", isAddingFolder && "text-blue-500")}
-          >
-            <ListPlus className="h-5 w-5" />
-          </button>
-          <button type="button" aria-label="Expand" className="hover:text-white transition-colors">
-            <Expand className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-
-      <div className="mt-4 h-px bg-white/10" />
-
-      {isAddingFolder && (
-        <form onSubmit={handleCreateFolder} className="mt-4 px-2">
-          <div className="relative flex items-center bg-zinc-800/40 rounded-xl border border-white/10 px-3 py-2.5 focus-within:border-blue-500/50 transition-colors">
-            <Plus className="h-4 w-4 text-zinc-500 mr-2" />
-            <input
-              type="text"
-              placeholder="List name"
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              className="bg-transparent border-none outline-none text-sm text-zinc-100 w-full placeholder:text-zinc-500"
-              autoFocus
-            />
-            {newFolderName && (
-              <button type="submit" className="text-xs font-semibold text-blue-500 hover:text-blue-400">
-                Create
+        {mode === "classic" ? (
+          <section className="space-y-6 pt-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1 group cursor-pointer">
+                <h2 className="text-[21px] font-medium tracking-[-0.03em] text-white group-hover:text-white/90">Watchlist</h2>
+                <ChevronDown className="h-4 w-4 text-white/50 group-hover:text-white/70" />
+              </div>
+              <button
+                type="button"
+                aria-label="Add"
+                className="hover:text-white transition-colors"
+                onClick={() => setIsAddingFolder((prev) => !prev)}
+              >
+                <Plus className="h-5 w-5 text-white/72" />
               </button>
+            </div>
+
+            {isAddingFolder && (
+              <form onSubmit={handleCreateFolder} className="px-2">
+                <div className="relative flex items-center bg-zinc-800/40 rounded-xl border border-white/10 px-3 py-2.5 focus-within:border-blue-500/50 transition-colors">
+                  <Plus className="h-4 w-4 text-zinc-500 mr-2" />
+                  <input
+                    type="text"
+                    placeholder="List name"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    className="bg-transparent border-none outline-none text-sm text-zinc-100 w-full placeholder:text-zinc-500"
+                    autoFocus
+                  />
+                  {newFolderName && (
+                    <button type="submit" className="text-xs font-semibold text-blue-500 hover:text-blue-400">
+                      Create
+                    </button>
+                  )}
+                </div>
+              </form>
             )}
-          </div>
-        </form>
-      )}
 
-      <section className="pt-7">
-        <div className="flex items-center justify-between px-2 mb-2">
-          <h3 className="text-[17px] font-medium text-white">Watchlist</h3>
-          <div className="flex items-center gap-4 text-white/72">
-            <button 
-              type="button" 
-              aria-label="Add to watchlist" 
-              className="hover:text-white transition-colors"
-              onClick={() => {
-                // If there are folders, trigger the first one's edit mode
-                // Since we can't easily trigger the child's state, we could just open New List
-                setIsAddingFolder(true);
-              }}
-            >
-              <Plus className="h-5 w-5" />
-            </button>
-            <button type="button" aria-label="Collapse watchlist" className="hover:text-white transition-colors">
-              <ChevronUp className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+            <div className="space-y-1">
+              {watchlistFolders.length === 0 ? (
+                <p className="px-4 py-2 text-[15px] text-white/50 italic">No watchlists. Create one to get started!</p>
+              ) : (
+                watchlistFolders.map((folder) => (
+                  <WatchlistFolder key={folder.id} folder={folder} allFolders={watchlistFolders} />
+                ))
+              )}
+            </div>
 
-        <div className="space-y-1">
-          {watchlistFolders.length === 0 ? (
-            <p className="px-4 py-2 text-[15px] text-white/50 italic">This list is empty</p>
-          ) : (
-            watchlistFolders.map((folder) => (
-              <WatchlistFolder 
-                key={folder.id} 
-                folder={folder} 
-                allFolders={watchlistFolders} 
-              />
-            ))
-          )}
-        </div>
-      </section>
-
-      <section className="pt-10">
-        <div className="flex items-center justify-between">
-          <h3 className="text-[17px] font-medium text-white">Equity sectors</h3>
-          <button type="button" aria-label="Collapse equity sectors" className="text-white/72">
-            <ChevronUp className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="mt-4 divide-y divide-white/8">
-          {sectorRows.map((sector) => (
-            <div key={sector.symbol} className="grid grid-cols-[1fr_92px_auto] items-center gap-4 py-3.5">
-              <div className="min-w-0">
-                <p className="truncate text-[15px] font-medium tracking-[0.01em] text-white">
-                  {sector.symbol}
-                </p>
-                <p className="mt-1 text-sm text-white/52">{sector.label}</p>
+            <p className="px-3 text-[11px] text-white/30 uppercase tracking-widest font-semibold pt-4">
+              Hold & Drag to Dashboard
+            </p>
+          </section>
+        ) : (
+          <>
+            <div className="flex items-center justify-between">
+              <div className="relative group">
+                <button
+                  type="button"
+                  className="flex items-center gap-1 cursor-pointer group-hover:text-white/90 transition-colors"
+                >
+                  <h2 className="text-[21px] font-medium tracking-[-0.03em] text-white">Lists</h2>
+                  <ChevronDown className="h-4 w-4 text-white/50 group-hover:text-white/70" />
+                </button>
+                <div className="absolute top-full left-0 mt-2 w-48 py-2 bg-zinc-900 border border-white/10 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                  <button className="w-full text-left px-4 py-2 text-sm text-zinc-300 hover:bg-white/10 transition-colors">
+                    Manage lists
+                  </button>
+                  <button className="w-full text-left px-4 py-2 text-sm text-zinc-300 hover:bg-white/10 transition-colors">
+                    Recently visited
+                  </button>
+                  <div className="my-1 h-px bg-white/5" />
+                  <button
+                    onClick={handleDeleteAllFolders}
+                    className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-400/10 transition-colors"
+                  >
+                    Delete all lists
+                  </button>
+                </div>
               </div>
-              <div className="h-9">
-                <MiniSparkline points={sector.sparkline} trend={sector.changePercent >= 0 ? "up" : "down"} />
-              </div>
-              <div className="text-right">
-                <p className="text-[15px] font-medium text-white">{formatPrice(sector.price)}</p>
-                <p className={sector.changePercent >= 0 ? "mt-1 text-sm text-[#8ee78f]" : "mt-1 text-sm text-[#f28b82]"}>
-                  {sector.changePercent >= 0 ? "+" : ""}
-                  {sector.changePercent.toFixed(2)}%
-                </p>
+              <div className="flex items-center gap-4 text-white/72">
+                <button
+                  type="button"
+                  aria-label="New list"
+                  className={cn("hover:text-white transition-colors", isAddingFolder && "text-blue-500")}
+                  onClick={() => setIsAddingFolder((prev) => !prev)}
+                >
+                  <ListPlus className="h-5 w-5" />
+                </button>
+                <button type="button" aria-label="Expand" className="hover:text-white transition-colors">
+                  <Expand className="h-4 w-4" />
+                </button>
               </div>
             </div>
-          ))}
-          {sectorRows.length === 0 && (
-            <p className="py-4 text-sm text-white/45">
-              {sectorsLoaded ? "No sector data available" : "Loading sectors..."}
-            </p>
-          )}
-        </div>
-      </section>
+
+            <div className="mt-4 h-px bg-white/10" />
+
+            {isAddingFolder && (
+              <form onSubmit={handleCreateFolder} className="mt-4 px-2">
+                <div className="relative flex items-center bg-zinc-800/40 rounded-xl border border-white/10 px-3 py-2.5 focus-within:border-blue-500/50 transition-colors">
+                  <Plus className="h-4 w-4 text-zinc-500 mr-2" />
+                  <input
+                    type="text"
+                    placeholder="List name"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    className="bg-transparent border-none outline-none text-sm text-zinc-100 w-full placeholder:text-zinc-500"
+                    autoFocus
+                  />
+                  {newFolderName && (
+                    <button type="submit" className="text-xs font-semibold text-blue-500 hover:text-blue-400">
+                      Create
+                    </button>
+                  )}
+                </div>
+              </form>
+            )}
+
+            <section className="pt-7">
+              <div className="flex items-center justify-between px-2 mb-2">
+                <h3 className="text-[17px] font-medium text-white">Watchlist</h3>
+                <div className="flex items-center gap-4 text-white/72">
+                  <button
+                    type="button"
+                    aria-label="Add to watchlist"
+                    className="hover:text-white transition-colors"
+                    onClick={() => setIsAddingFolder(true)}
+                  >
+                    <Plus className="h-5 w-5" />
+                  </button>
+                  <button type="button" aria-label="Collapse watchlist" className="hover:text-white transition-colors">
+                    <ChevronUp className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                {watchlistFolders.length === 0 ? (
+                  <p className="px-4 py-2 text-[15px] text-white/50 italic">This list is empty</p>
+                ) : (
+                  watchlistFolders.map((folder) => (
+                    <WatchlistFolder key={folder.id} folder={folder} allFolders={watchlistFolders} />
+                  ))
+                )}
+              </div>
+            </section>
+
+            <section className="pt-10">
+              <div className="flex items-center justify-between">
+                <h3 className="text-[17px] font-medium text-white">Equity sectors</h3>
+                <button type="button" aria-label="Collapse equity sectors" className="text-white/72">
+                  <ChevronUp className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="mt-4 divide-y divide-white/8">
+                {sectorRows.map((sector) => (
+                  <div key={sector.symbol} className="grid grid-cols-[1fr_92px_auto] items-center gap-4 py-3.5">
+                    <div className="min-w-0">
+                      <p className="truncate text-[15px] font-medium tracking-[0.01em] text-white">
+                        {sector.symbol}
+                      </p>
+                      <p className="mt-1 text-sm text-white/52">{sector.label}</p>
+                    </div>
+                    <div className="h-9">
+                      <MiniSparkline points={sector.sparkline} trend={sector.changePercent >= 0 ? "up" : "down"} />
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[15px] font-medium text-white">{formatPrice(sector.price)}</p>
+                      <p className={sector.changePercent >= 0 ? "mt-1 text-sm text-[#8ee78f]" : "mt-1 text-sm text-[#f28b82]"}>
+                        {sector.changePercent >= 0 ? "+" : ""}
+                        {sector.changePercent.toFixed(2)}%
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </>
+        )}
     </aside>
     </>
   );

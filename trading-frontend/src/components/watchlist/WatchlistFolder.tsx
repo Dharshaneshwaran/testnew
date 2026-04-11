@@ -5,7 +5,7 @@ import { WatchlistItem } from "@/components/watchlist/WatchlistItem";
 import { WatchlistFolderType } from "@/types/watchlist";
 import { cn } from "@/lib/utils";
 import { searchMarket } from "@/lib/api/market";
-import { addWatchlistItem, removeWatchlistItem, deleteWatchlistFolder } from "@/lib/api/watchlist";
+import { addWatchlistItem, deleteWatchlistFolder, deleteWatchlistItem, removeWatchlistItem } from "@/lib/api/watchlist";
 import { useAuth } from "@/components/auth/AuthProvider";
 
 export function WatchlistFolder({ 
@@ -24,11 +24,11 @@ export function WatchlistFolder({
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const DEFAULT_SUGGESTIONS = [
-    { hint: "NIFTY 50", label: "NSE", route: "/index/nifty", keywords: ["NIFTY"] },
-    { hint: "SENSEX", label: "BSE", route: "/index/sensex", keywords: ["SENSEX"] },
-    { hint: "RELIANCE", label: "NSE", route: "/stock/reliance", keywords: ["Reliance Industries"] },
-    { hint: "HDFCBANK", label: "NSE", route: "/stock/hdfcbank", keywords: ["HDFC Bank"] },
-    { hint: "TCS", label: "NSE", route: "/stock/tcs", keywords: ["Tata Consultancy Services"] },
+    { hint: "NIFTY 50", label: "NSE", route: "/index/nifty", keywords: ["NIFTY"], symbol: "NIFTY" },
+    { hint: "SENSEX", label: "BSE", route: "/index/sensex", keywords: ["SENSEX"], symbol: "SENSEX" },
+    { hint: "RELIANCE", label: "NSE", route: "/stock/reliance", keywords: ["Reliance Industries"], symbol: "RELIANCE" },
+    { hint: "TCS", label: "NSE", route: "/stock/tcs", keywords: ["Tata Consultancy Services"], symbol: "TCS" },
+    { hint: "HDFCBANK", label: "NSE", route: "/stock/hdfcbank", keywords: ["HDFC Bank"], symbol: "HDFCBANK" },
   ];
 
   const performSearch = async (query: string) => {
@@ -74,13 +74,25 @@ export function WatchlistFolder({
 
   const [activeSelector, setActiveSelector] = useState<string | null>(null);
 
-  const isSymbolInFolder = (symbol: string, targetFolderId: string) => {
-    const f = allFolders.find(f => f.id === targetFolderId);
-    return f?.items.some(item => item.symbol === symbol);
+  const normalizeSymbol = (hint: string, resultSymbol?: string) => {
+    let symbol = resultSymbol || hint;
+    const symbolMap: Record<string, string> = {
+      "NIFTY 50": "NIFTY",
+      "BSE SENSEX": "SENSEX",
+      "NIFTY BANK": "BANKNIFTY",
+    };
+    return symbolMap[hint] || symbol;
   };
 
-  const handleToggleFolder = async (symbol: string, targetFolderId: string, exchange: string = "NSE") => {
+  const isSymbolInFolder = (symbol: string, targetFolderId: string) => {
+    const normalizedSymbol = normalizeSymbol(symbol, symbol);
+    const targetFolder = allFolders.find((candidate) => candidate.id === targetFolderId);
+    return targetFolder?.items.some((item) => item.symbol === normalizedSymbol);
+  };
+
+  const handleToggleFolder = async (hint: string, targetFolderId: string, exchange: string = "NSE", resultSymbol?: string) => {
     if (!token) return;
+    const symbol = normalizeSymbol(hint, resultSymbol);
     const exists = isSymbolInFolder(symbol, targetFolderId);
     try {
       if (exists) {
@@ -88,13 +100,16 @@ export function WatchlistFolder({
       } else {
         await addWatchlistItem(token, targetFolderId, symbol, exchange);
       }
+      setActiveSelector(null);
+      window.dispatchEvent(new Event("watchlist-updated"));
     } catch (err) {
       console.error("Toggle failed", err);
     }
   };
 
-  const handleAddToThisFolder = async (symbol: string, exchange: string = "NSE") => {
+  const handleAddToThisFolder = async (hint: string, exchange: string = "NSE", resultSymbol?: string) => {
     if (!token) return;
+    const symbol = normalizeSymbol(hint, resultSymbol);
     if (isSymbolInFolder(symbol, folder.id)) return;
     try {
       await addWatchlistItem(token, folder.id, symbol, exchange);
@@ -114,11 +129,21 @@ export function WatchlistFolder({
     }
     try {
       await deleteWatchlistFolder(token, folder.id);
-      // The parent component should handle re-fetching the folders
-      window.location.reload(); // Simple reload for now
+      window.dispatchEvent(new Event("watchlist-updated"));
     } catch (err) {
       console.error("Delete failed", err);
       alert("Failed to delete watchlist. Please try again.");
+    }
+  };
+
+  const handleRemove = async (itemId: string) => {
+    if (!token) return;
+    try {
+      await deleteWatchlistItem(token, itemId);
+      window.dispatchEvent(new Event("watchlist-updated"));
+    } catch (err) {
+      console.error("Remove failed", err);
+      throw err;
     }
   };
 
@@ -198,7 +223,8 @@ export function WatchlistFolder({
                     {searchQuery ? "Search Results" : "Popular on Google"}
                   </div>
                   {results.map((result) => {
-                    const inCurrent = isSymbolInFolder(result.hint, folder.id);
+                    const symbol = normalizeSymbol(result.hint, result.symbol);
+                    const inCurrent = isSymbolInFolder(symbol, folder.id);
                     const showSelector = activeSelector === result.hint;
 
                     return (
@@ -232,24 +258,25 @@ export function WatchlistFolder({
                                 {allFolders.map(f => (
                                   <button
                                     key={f.id}
-                                    onClick={() => handleToggleFolder(result.hint, f.id, result.label)}
+                                    onClick={() => handleToggleFolder(result.hint, f.id, result.label, result.symbol)}
                                     className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-sm text-zinc-300"
                                   >
                                     <span className="capitalize">{f.name}</span>
-                                    {isSymbolInFolder(result.hint, f.id) && <Check className="h-4 w-4 text-blue-500" />}
+                                    {isSymbolInFolder(symbol, f.id) && <Check className="h-4 w-4 text-blue-500" />}
                                   </button>
                                 ))}
                               </div>
                             )}
                           </div>
 
-                          <div className="flex-1 min-w-0" onClick={() => !inCurrent && handleAddToThisFolder(result.hint, result.label)}>
+                          <div className="flex-1 min-w-0" onClick={() => !inCurrent && handleAddToThisFolder(result.hint, result.label, result.symbol)}>
                             <div className="flex items-baseline gap-2">
                               <span className="text-[15px] font-semibold text-zinc-100 tracking-tight">{result.hint}</span>
                               <span className="text-[11px] text-zinc-500 uppercase font-medium">{result.label}</span>
                             </div>
                             <p className="text-xs text-zinc-500 truncate mt-0.5">{result.keywords[0]}</p>
                           </div>
+                        </div>
                         </div>
                       </div>
                     );
@@ -268,7 +295,11 @@ export function WatchlistFolder({
                   index === self.findIndex((t) => t.symbol === item.symbol)
                 )
                 .map((item) => (
-                  <WatchlistItem key={`${folder.id}-${item.symbol}`} item={item} />
+                  <WatchlistItem 
+                    key={`${folder.id}-${item.id}`} 
+                    item={item}
+                    onRemove={handleRemove}
+                  />
                 ))
             )}
           </div>

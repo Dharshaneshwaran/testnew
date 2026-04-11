@@ -11,6 +11,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTransition } from "react";
 
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useDashboard } from "@/context/DashboardContext";
 import { cn } from "@/lib/utils";
 import {
   getIndexQuotes,
@@ -30,11 +31,11 @@ export function Header({ title, subtitle }: { title: string; subtitle: string })
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
+  const { mode, setMode } = useDashboard();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchError, setSearchError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<MarketSearchItem[]>([]);
   const [tickers, setTickers] = useState<Ticker[]>([]);
-  const [isBeta, setIsBeta] = useState(true);
   const [isPending, startTransition] = useTransition();
   const normalizedQuery = searchQuery.trim();
 
@@ -191,23 +192,23 @@ export function Header({ title, subtitle }: { title: string; subtitle: string })
             <div className="hidden items-center rounded-full border border-white/10 bg-white/[0.02] p-1 lg:flex">
               <button 
                 type="button" 
-                onClick={() => setIsBeta(false)}
+                onClick={() => setMode("classic")}
                 className={cn(
                   "rounded-full px-4 py-1.5 text-sm transition-colors",
-                  !isBeta ? "bg-[#1a1d27] text-[#8ee78f]" : "text-white/75"
+                  mode === "classic" ? "bg-[#1a1d27] text-[#8ee78f]" : "text-white/75"
                 )}
               >
                 Classic
               </button>
               <button
                 type="button"
-                onClick={() => setIsBeta(true)}
+                onClick={() => setMode("beta")}
                 className={cn(
                   "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm transition-colors",
-                  isBeta ? "bg-[#1a1d27] text-[#8ee78f]" : "text-white/75"
+                  mode === "beta" ? "bg-[#1a1d27] text-[#8ee78f]" : "text-white/75"
                 )}
               >
-                {isBeta && <Check className="h-4 w-4" />}
+                {mode === "beta" && <Check className="h-4 w-4" />}
                 Beta
               </button>
             </div>
