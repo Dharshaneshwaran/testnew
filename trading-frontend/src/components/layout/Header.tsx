@@ -124,9 +124,11 @@ export function Header({ title, subtitle }: { title: string; subtitle: string })
             </button>
           </div>
 
-          <div className="hidden min-w-0 flex-1 items-center gap-3 xl:flex">
+          <div className="hidden min-w-0 flex-1 items-center gap-3 overflow-x-auto no-scrollbar py-1 xl:flex">
             {tickers.map((ticker) => (
-              <MarketChip key={ticker.symbol} ticker={ticker} />
+              <div key={ticker.symbol} className="flex-shrink-0">
+                <MarketChip ticker={ticker} />
+              </div>
             ))}
           </div>
 
@@ -160,8 +162,14 @@ export function Header({ title, subtitle }: { title: string; subtitle: string })
                       }}
                       className="flex w-full items-center justify-between border-b border-white/5 px-4 py-3 text-left transition hover:bg-white/[0.04] last:border-b-0"
                     >
-                      <span className="text-sm text-white/92">{item.label}</span>
-                      <span className="text-xs text-white/45">{item.hint}</span>
+                      <div>
+                        <span className="text-sm font-semibold text-zinc-100">{item.label}</span>
+                        {item.hint && item.hint !== item.label ? (
+                          <p className="text-[11px] text-zinc-500 mt-0.5">{item.hint}</p>
+                        ) : (
+                          <p className="text-[11px] text-zinc-500 mt-0.5">NSE Index</p>
+                        )}
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -222,9 +230,9 @@ function MarketChip({ ticker }: { ticker: Ticker }) {
   const isPositive = ticker.change >= 0;
 
   return (
-    <div className="flex min-w-0 items-center gap-3 rounded-full bg-white/[0.05] px-5 py-2.5">
-      <span className="truncate text-sm text-white/88">{ticker.name}</span>
-      <span className="truncate text-sm text-white/62">{ticker.price.toFixed(2)}</span>
+    <div className="flex items-center gap-3 rounded-full bg-white/[0.05] px-4 py-2">
+      <span className="whitespace-nowrap text-[13px] font-semibold text-white/92">{ticker.name}</span>
+      <span className="whitespace-nowrap text-[13px] text-zinc-500 font-medium">{ticker.price.toFixed(2)}</span>
       <span
         className={cn(
           "flex items-center gap-1 text-sm font-medium",

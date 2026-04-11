@@ -23,8 +23,10 @@ export function MarketCard({
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <div>
-            <CardTitle className="text-sm text-zinc-200">{symbol}</CardTitle>
-            <p className="text-xs text-zinc-500">{name}</p>
+            <CardTitle className="text-sm font-bold text-zinc-100">{symbol}</CardTitle>
+            {name && name !== symbol ? (
+              <p className="text-[11px] text-zinc-500 mt-1 font-medium">{name}</p>
+            ) : null}
           </div>
           <WatchlistAddButton symbol={symbol} />
         </div>

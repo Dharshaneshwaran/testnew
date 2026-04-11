@@ -13,7 +13,7 @@ export function MiniSparkline({
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!chartRef.current) {
+    if (!chartRef.current || points.length === 0) {
       return;
     }
 

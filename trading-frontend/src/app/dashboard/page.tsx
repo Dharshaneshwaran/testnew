@@ -175,7 +175,7 @@ export default function DashboardPage() {
               sparkline={sparklineMap[ticker.symbol] ?? []}
             />
           ))}
-          {loading && <p className="text-sm text-zinc-500">Loading market tickers...</p>}
+          {loading && tickers.length === 0 && <p className="text-sm text-zinc-500">Loading market tickers...</p>}
         </section>
 
         <section className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
