@@ -76,9 +76,10 @@ export function WatchlistFolder({ folder }: { folder: WatchlistFolderType }) {
     }
     try {
       await addWatchlistItem(token, folder.id, symbol, "NSE");
-      // For immediate feedback in this demo, you could optimistically add to folder.items
       setSearchQuery("");
       setResults([]);
+      setIsEditing(false);
+      window.dispatchEvent(new Event("watchlist-updated"));
     } catch (err) {
       console.error("Add failed", err);
     }
@@ -177,9 +178,13 @@ export function WatchlistFolder({ folder }: { folder: WatchlistFolderType }) {
             {folder.items.length === 0 ? (
               !isEditing && <p className="px-4 py-2 text-sm text-zinc-500 italic">This list is empty</p>
             ) : (
-              folder.items.map((item, index) => (
-                <WatchlistItem key={`${folder.id}-${item.symbol}-${index}`} item={item} />
-              ))
+              folder.items
+                .filter((item, index, self) => 
+                  index === self.findIndex((t) => t.symbol === item.symbol)
+                )
+                .map((item) => (
+                  <WatchlistItem key={`${folder.id}-${item.symbol}`} item={item} />
+                ))
             )}
           </div>
         </div>

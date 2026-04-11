@@ -41,3 +41,21 @@ select {
   background: rgba(168, 199, 250, 0.28);
   color: #ffffff;
 }
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* Hide Next.js Dev Activity Indicator & Overlays */
+next-portal, 
+#nextjs-dev-indicator,
+#__next-build-watcher, 
+#next-dev-tool-root,
+[data-nextjs-toast],
+[data-nextjs-portal] {
+  display: none !important;
+}

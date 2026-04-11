@@ -26,6 +26,7 @@ export function Sidebar() {
   const [watchlistFolders, setWatchlistFolders] = useState<WatchlistFolderType[]>([]);
   const [sectorRows, setSectorRows] = useState<LiveSectorRow[]>([]);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sectorsLoaded, setSectorsLoaded] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -82,11 +83,14 @@ export function Sidebar() {
 
         if (active) {
           setSectorRows(nextRows.filter((row): row is LiveSectorRow => row !== null));
+          setSectorsLoaded(true);
         }
       } catch {
         if (active) {
           setSectorRows([]);
         }
+      } finally {
+        if (active) setSectorsLoaded(true);
       }
     }
 
@@ -193,7 +197,9 @@ export function Sidebar() {
             </div>
           ))}
           {sectorRows.length === 0 && (
-            <p className="py-4 text-sm text-white/45">Loading sectors...</p>
+            <p className="py-4 text-sm text-white/45">
+              {sectorsLoaded ? "No sector data available" : "Loading sectors..."}
+            </p>
           )}
         </div>
       </section>

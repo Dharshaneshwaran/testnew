@@ -12,6 +12,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/globe.svg" />
+      </head>
       <body className="min-h-screen bg-[#030507] text-zinc-100 antialiased" suppressHydrationWarning>
         <AuthProvider>{children}</AuthProvider>
       </body>

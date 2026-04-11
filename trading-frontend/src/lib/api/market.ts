@@ -165,12 +165,14 @@ export async function getMovers() {
   } catch (e) {
     return {
       gainers: [
-        { symbol: "TATASTEEL", name: "Tata Steel", ltp: 156.4, change: 4.2, changePercent: 2.8 },
-        { symbol: "HDFCBANK", name: "HDFC Bank", ltp: 1450.2, change: 25.4, changePercent: 1.8 }
+        { symbol: "ASIANPAINT", name: "Asian Paints Limited", ltp: 2360.70, change: 91.2, changePercent: 4.01 },
+        { symbol: "ICICIBANK", name: "ICICI Bank Ltd", ltp: 1321.90, change: 40.5, changePercent: 3.17 },
+        { symbol: "TATAMOTORS", name: "Tata Motors Ltd", ltp: 342.60, change: 9.4, changePercent: 2.81 },
+        { symbol: "SBIN", name: "State Bank of India", ltp: 1066.70, change: 25.4, changePercent: 2.47 }
       ],
       losers: [
-        { symbol: "WIPRO", name: "Wipro Ltd", ltp: 450.1, change: -12.4, changePercent: -2.6 },
-        { symbol: "INFY", name: "Infosys", ltp: 1600.5, change: -30.5, changePercent: -1.9 }
+        { symbol: "WIPRO", name: "Wipro Limited", ltp: 450.1, change: -12.4, changePercent: -2.6 },
+        { symbol: "INFY", name: "Infosys Limited", ltp: 1600.5, change: -30.5, changePercent: -1.9 }
       ]
     };
   }
