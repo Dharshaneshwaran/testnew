@@ -124,4 +124,42 @@ export class WatchlistService {
 
     return { success: true };
   }
+
+  async deleteFolder(userId: string, folderId: string) {
+    const folder = await this.prisma.watchlistFolder.findUnique({
+      where: { id: folderId },
+    });
+
+    if (!folder) {
+      throw new NotFoundException('Watchlist folder not found');
+    }
+
+    if (folder.userId !== userId) {
+      throw new ForbiddenException('Cannot delete this folder');
+    }
+
+    // Prisma handles cascading deletes if configured, but explicit is fine here
+    await this.prisma.watchlistItem.deleteMany({ where: { folderId } });
+    await this.prisma.watchlistFolder.delete({ where: { id: folderId } });
+
+    return { success: true };
+  }
+
+  async deleteAllFolders(userId: string) {
+    const folders = await this.prisma.watchlistFolder.findMany({
+      where: { userId },
+    });
+
+    const folderIds = folders.map((f) => f.id);
+
+    await this.prisma.watchlistItem.deleteMany({
+      where: { folderId: { in: folderIds } },
+    });
+
+    await this.prisma.watchlistFolder.deleteMany({
+      where: { userId },
+    });
+
+    return { success: true };
+  }
 }

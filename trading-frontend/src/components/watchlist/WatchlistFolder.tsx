@@ -1,11 +1,11 @@
-import { Check, ChevronDown, ChevronRight, Plus, Search, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Plus, Search, X, MoreHorizontal, Trash2 } from "lucide-react";
 import { useState, useCallback, useRef, useEffect } from "react";
 
 import { WatchlistItem } from "@/components/watchlist/WatchlistItem";
 import { WatchlistFolderType } from "@/types/watchlist";
 import { cn } from "@/lib/utils";
 import { searchMarket } from "@/lib/api/market";
-import { addWatchlistItem, removeWatchlistItem } from "@/lib/api/watchlist";
+import { addWatchlistItem, removeWatchlistItem, deleteWatchlistFolder } from "@/lib/api/watchlist";
 import { useAuth } from "@/components/auth/AuthProvider";
 
 export function WatchlistFolder({ 
@@ -18,6 +18,7 @@ export function WatchlistFolder({
   const { token } = useAuth();
   const [open, setOpen] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -105,6 +106,16 @@ export function WatchlistFolder({
     }
   };
 
+  const handleDeleteFolder = async () => {
+    if (!token) return;
+    try {
+      await deleteWatchlistFolder(token, folder.id);
+      window.dispatchEvent(new CustomEvent("watchlist-updated"));
+    } catch (err) {
+      console.error("Failed to delete folder", err);
+    }
+  };
+
   return (
     <div className="border-t border-white/5 py-1 first:border-t-0">
       <div className="group flex items-center justify-between px-2 py-3">
@@ -125,22 +136,67 @@ export function WatchlistFolder({
               Done
             </button>
           ) : (
-            <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-              <button
-                type="button"
-                onClick={handleToggleEdit}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 transition hover:bg-white/10 hover:text-white"
-                title="Add to this list"
-              >
-                <Plus className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setOpen((prev) => !prev)}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 transition hover:bg-white/10 hover:text-white"
-              >
-                {open ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-              </button>
+            <div className="flex items-center gap-1">
+              <div className="relative pointer-events-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowOptions((prev) => !prev);
+                  }}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 transition hover:bg-white/10 hover:text-white"
+                  title="List options"
+                >
+                  <MoreHorizontal className="h-5 w-5" />
+                </button>
+                {showOptions && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowOptions(false);
+                      }}
+                    />
+                    <div className="absolute top-full right-0 mt-1 w-40 bg-zinc-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 overflow-hidden animate-in fade-in zoom-in-95">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowOptions(false);
+                          handleDeleteFolder();
+                        }}
+                        className="w-full flex items-center px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 transition-colors text-left"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete list
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleEdit();
+                  }}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 transition hover:bg-white/10 hover:text-white"
+                  title="Add to this list"
+                >
+                  <Plus className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpen((prev) => !prev);
+                  }}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 transition hover:bg-white/10 hover:text-white"
+                >
+                  {open ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                </button>
+              </div>
             </div>
           )}
         </div>
