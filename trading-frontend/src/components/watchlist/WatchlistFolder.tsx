@@ -238,8 +238,8 @@ export function WatchlistFolder({
             {folder.items.length === 0 ? (
               !isEditing && <p className="px-4 py-2 text-sm text-zinc-500 italic">This list is empty</p>
             ) : (
-              folder.items.map((item) => (
-                <WatchlistItem key={`${folder.id}-${item.symbol}`} item={item} />
+              folder.items.map((item, index) => (
+                <WatchlistItem key={`${folder.id}-${item.symbol}-${index}`} item={item} />
               ))
             )}
           </div>
