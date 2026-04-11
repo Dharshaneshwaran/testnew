@@ -149,6 +149,8 @@ export function WatchlistFolder({
       console.error("Remove failed", err);
       throw err;
     }
+  };
+
   const cancelDelete = () => {
     setShowDeleteConfirm(false);
   };
