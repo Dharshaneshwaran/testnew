@@ -1,11 +1,11 @@
-import { Check, ChevronDown, ChevronRight, Plus, Search, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Plus, Search, Trash2, X } from "lucide-react";
 import { useState, useCallback, useRef, useEffect } from "react";
 
 import { WatchlistItem } from "@/components/watchlist/WatchlistItem";
 import { WatchlistFolderType } from "@/types/watchlist";
 import { cn } from "@/lib/utils";
 import { searchMarket } from "@/lib/api/market";
-import { addWatchlistItem, removeWatchlistItem } from "@/lib/api/watchlist";
+import { addWatchlistItem, removeWatchlistItem, deleteWatchlistFolder } from "@/lib/api/watchlist";
 import { useAuth } from "@/components/auth/AuthProvider";
 
 export function WatchlistFolder({ 
@@ -105,6 +105,21 @@ export function WatchlistFolder({
     }
   };
 
+  const handleDeleteFolder = async () => {
+    if (!token) return;
+    if (!confirm(`Are you sure you want to delete the "${folder.name}" watchlist? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      await deleteWatchlistFolder(token, folder.id);
+      // The parent component should handle re-fetching the folders
+      window.location.reload(); // Simple reload for now
+    } catch (err) {
+      console.error("Delete failed", err);
+      alert("Failed to delete watchlist. Please try again.");
+    }
+  };
+
   return (
     <div className="border-t border-white/5 py-1 first:border-t-0">
       <div className="group flex items-center justify-between px-2 py-3">
@@ -133,6 +148,14 @@ export function WatchlistFolder({
                 title="Add to this list"
               >
                 <Plus className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteFolder}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 transition hover:bg-red-500/20 hover:text-red-400"
+                title="Delete this list"
+              >
+                <Trash2 className="h-4 w-4" />
               </button>
               <button
                 type="button"

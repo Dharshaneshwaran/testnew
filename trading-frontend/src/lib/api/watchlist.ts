@@ -171,3 +171,14 @@ export async function removeWatchlistItem(
     token,
   );
 }
+
+export async function deleteWatchlistFolder(
+  token: string,
+  folderId: string,
+): Promise<{ success: boolean }> {
+  return apiRequest<{ success: boolean }>(
+    `/watchlist/folders/${folderId}`,
+    { method: 'DELETE' },
+    token,
+  );
+}
