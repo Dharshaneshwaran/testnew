@@ -133,3 +133,18 @@ export async function deleteWatchlistItem(
     token,
   );
 }
+
+export async function removeWatchlistItem(
+  token: string,
+  folderId: string,
+  symbol: string,
+): Promise<{ success: boolean }> {
+  return apiRequest<{ success: boolean }>(
+    '/watchlist/items/remove',
+    {
+      method: 'POST',
+      body: JSON.stringify({ folderId, symbol }),
+    },
+    token,
+  );
+}

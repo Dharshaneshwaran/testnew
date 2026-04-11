@@ -205,7 +205,11 @@ export function Sidebar() {
             <p className="px-4 py-2 text-[15px] text-white/50 italic">This list is empty</p>
           ) : (
             watchlistFolders.map((folder) => (
-              <WatchlistFolder key={folder.id} folder={folder} />
+              <WatchlistFolder 
+                key={folder.id} 
+                folder={folder} 
+                allFolders={watchlistFolders} 
+              />
             ))
           )}
         </div>
