@@ -182,3 +182,13 @@ export async function deleteWatchlistFolder(
     token,
   );
 }
+
+export async function deleteAllWatchlistFolders(
+  token: string,
+): Promise<{ success: boolean }> {
+  return apiRequest<{ success: boolean }>(
+    '/watchlist/folders',
+    { method: 'DELETE' },
+    token,
+  );
+}

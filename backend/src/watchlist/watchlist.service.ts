@@ -141,4 +141,20 @@ export class WatchlistService {
     await this.prisma.watchlistFolder.delete({ where: { id: folderId } });
     return { success: true };
   }
+
+  async deleteAllFolders(userId: string) {
+    await this.prisma.watchlistItem.deleteMany({
+      where: {
+        folder: {
+          userId,
+        },
+      },
+    });
+
+    await this.prisma.watchlistFolder.deleteMany({
+      where: { userId },
+    });
+
+    return { success: true };
+  }
 }

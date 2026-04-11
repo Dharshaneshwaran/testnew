@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronRight, Plus, Search, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Plus, Search, Trash2, X, AlertTriangle } from "lucide-react";
 import { useState, useCallback, useRef, useEffect } from "react";
 
 import { WatchlistItem } from "@/components/watchlist/WatchlistItem";
@@ -73,6 +73,7 @@ export function WatchlistFolder({
   };
 
   const [activeSelector, setActiveSelector] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const isSymbolInFolder = (symbol: string, targetFolderId: string) => {
     const f = allFolders.find(f => f.id === targetFolderId);
@@ -107,9 +108,11 @@ export function WatchlistFolder({
 
   const handleDeleteFolder = async () => {
     if (!token) return;
-    if (!confirm(`Are you sure you want to delete the "${folder.name}" watchlist? This action cannot be undone.`)) {
-      return;
-    }
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    setShowDeleteConfirm(false);
     try {
       await deleteWatchlistFolder(token, folder.id);
       // The parent component should handle re-fetching the folders
@@ -118,6 +121,10 @@ export function WatchlistFolder({
       console.error("Delete failed", err);
       alert("Failed to delete watchlist. Please try again.");
     }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
   };
 
   return (
@@ -140,7 +147,7 @@ export function WatchlistFolder({
               Done
             </button>
           ) : (
-            <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+            <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={handleToggleEdit}
@@ -152,7 +159,7 @@ export function WatchlistFolder({
               <button
                 type="button"
                 onClick={handleDeleteFolder}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 transition hover:bg-red-500/20 hover:text-red-400"
+                className="flex h-8 w-8 items-center justify-center rounded-full text-red-500 transition hover:bg-red-500/20 hover:text-red-400 hover:scale-105"
                 title="Delete this list"
               >
                 <Trash2 className="h-4 w-4" />
@@ -265,6 +272,44 @@ export function WatchlistFolder({
                 <WatchlistItem key={`${folder.id}-${item.symbol}-${index}`} item={item} />
               ))
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Custom Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+          <div className="bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl max-w-md w-full mx-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 border border-red-500/30">
+                  <AlertTriangle className="h-6 w-6 text-red-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-zinc-100">Delete Watchlist</h3>
+                  <p className="text-sm text-zinc-500">Are you sure you want to delete this watchlist?</p>
+                </div>
+              </div>
+              
+              <p className="text-sm text-zinc-400 mb-6">
+                <span className="font-medium text-zinc-300">{folder.name}</span> will be permanently deleted. This action cannot be undone.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={cancelDelete}
+                  className="flex-1 px-4 py-2.5 text-sm font-medium text-zinc-400 hover:text-zinc-200 border border-white/10 hover:border-white/20 rounded-lg transition-colors bg-white/5 hover:bg-white/10"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 border border-red-500/30 rounded-lg transition-colors shadow-lg"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
