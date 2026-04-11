@@ -45,6 +45,17 @@ export class WatchlistService {
       throw new ForbiddenException('Cannot add item to this folder');
     }
 
+    const existing = await this.prisma.watchlistItem.findFirst({
+      where: {
+        folderId: dto.folderId,
+        symbol: dto.symbol.toUpperCase(),
+      },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
     return this.prisma.watchlistItem.create({
       data: {
         folderId: dto.folderId,

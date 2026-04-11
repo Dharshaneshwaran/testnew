@@ -55,27 +55,38 @@ export async function getWatchlistFolders(token: string): Promise<WatchlistFolde
     }),
   );
 
-  return folders.map((folder) => ({
-    id: folder.id,
-    name: folder.name,
-    items: folder.items.map((item): WatchlistItemType => {
-      const quote = quoteMap.get(item.symbol) ?? {
-        ltp: 0,
-        change: 0,
-        changePercent: 0,
-        sparkline: [],
-      };
+  return folders.map((folder): WatchlistFolderType => {
+    // Deduplicate items by symbol
+    const seen = new Set();
+    const uniqueItems = folder.items.filter(item => {
+      const symbol = item.symbol.toUpperCase();
+      if (seen.has(symbol)) return false;
+      seen.add(symbol);
+      return true;
+    });
 
-      return {
-        symbol: item.symbol,
-        exchange: normalizeExchange(item.exchange),
-        ltp: quote.ltp,
-        change: quote.change,
-        changePercent: quote.changePercent,
-        sparkline: quote.sparkline,
-      };
-    }),
-  }));
+    return {
+      id: folder.id,
+      name: folder.name,
+      items: uniqueItems.map((item): WatchlistItemType => {
+        const quote = quoteMap.get(item.symbol) ?? {
+          ltp: 0,
+          change: 0,
+          changePercent: 0,
+          sparkline: [],
+        };
+
+        return {
+          symbol: item.symbol,
+          exchange: normalizeExchange(item.exchange),
+          ltp: quote.ltp,
+          change: quote.change,
+          changePercent: quote.changePercent,
+          sparkline: quote.sparkline,
+        };
+      }),
+    };
+  });
 }
 export async function createWatchlistFolder(
   token: string,

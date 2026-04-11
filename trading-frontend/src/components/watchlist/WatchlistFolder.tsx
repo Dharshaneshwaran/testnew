@@ -27,8 +27,8 @@ export function WatchlistFolder({
     { hint: "NIFTY 50", label: "NSE", route: "/index/nifty", keywords: ["NIFTY"] },
     { hint: "SENSEX", label: "BSE", route: "/index/sensex", keywords: ["SENSEX"] },
     { hint: "RELIANCE", label: "NSE", route: "/stock/reliance", keywords: ["Reliance Industries"] },
-    { hint: "TCS", label: "NSE", route: "/stock/tcs", keywords: ["Tata Consultancy Services"] },
     { hint: "HDFCBANK", label: "NSE", route: "/stock/hdfcbank", keywords: ["HDFC Bank"] },
+    { hint: "TCS", label: "NSE", route: "/stock/tcs", keywords: ["Tata Consultancy Services"] },
   ];
 
   const performSearch = async (query: string) => {
@@ -79,25 +79,25 @@ export function WatchlistFolder({
     return f?.items.some(item => item.symbol === symbol);
   };
 
-  const handleToggleFolder = async (symbol: string, targetFolderId: string) => {
+  const handleToggleFolder = async (symbol: string, targetFolderId: string, exchange: string = "NSE") => {
     if (!token) return;
     const exists = isSymbolInFolder(symbol, targetFolderId);
     try {
       if (exists) {
         await removeWatchlistItem(token, targetFolderId, symbol);
       } else {
-        await addWatchlistItem(token, targetFolderId, symbol, "NSE");
+        await addWatchlistItem(token, targetFolderId, symbol, exchange);
       }
-      // Ideally trigger a context refresh here
     } catch (err) {
       console.error("Toggle failed", err);
     }
   };
 
-  const handleAddToThisFolder = async (symbol: string) => {
+  const handleAddToThisFolder = async (symbol: string, exchange: string = "NSE") => {
     if (!token) return;
+    if (isSymbolInFolder(symbol, folder.id)) return;
     try {
-      await addWatchlistItem(token, folder.id, symbol, "NSE");
+      await addWatchlistItem(token, folder.id, symbol, exchange);
       setSearchQuery("");
       setResults([]);
     } catch (err) {
@@ -207,7 +207,7 @@ export function WatchlistFolder({
                                 {allFolders.map(f => (
                                   <button
                                     key={f.id}
-                                    onClick={() => handleToggleFolder(result.hint, f.id)}
+                                    onClick={() => handleToggleFolder(result.hint, f.id, result.label)}
                                     className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-sm text-zinc-300"
                                   >
                                     <span className="capitalize">{f.name}</span>
@@ -218,7 +218,7 @@ export function WatchlistFolder({
                             )}
                           </div>
 
-                          <div className="flex-1 min-w-0" onClick={() => !inCurrent && handleAddToThisFolder(result.hint)}>
+                          <div className="flex-1 min-w-0" onClick={() => !inCurrent && handleAddToThisFolder(result.hint, result.label)}>
                             <div className="flex items-baseline gap-2">
                               <span className="text-[15px] font-semibold text-zinc-100 tracking-tight">{result.hint}</span>
                               <span className="text-[11px] text-zinc-500 uppercase font-medium">{result.label}</span>
