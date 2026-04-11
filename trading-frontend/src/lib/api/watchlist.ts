@@ -185,3 +185,12 @@ export async function deleteWatchlistFolder(
     token,
   );
 }
+
+export async function deleteAllWatchlistFolders(
+  token: string,
+): Promise<void> {
+  const folders = await getWatchlistFolders(token);
+  await Promise.all(
+    folders.map((folder) => deleteWatchlistFolder(token, folder.id)),
+  );
+}

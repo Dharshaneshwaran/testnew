@@ -1,5 +1,5 @@
 import { Check, ChevronDown, ChevronRight, Plus, Search, Trash2, X } from "lucide-react";
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useRef, useState } from "react";
 
 import { WatchlistItem } from "@/components/watchlist/WatchlistItem";
 import { WatchlistFolderType } from "@/types/watchlist";
@@ -276,7 +276,6 @@ export function WatchlistFolder({
                             </div>
                             <p className="text-xs text-zinc-500 truncate mt-0.5">{result.keywords[0]}</p>
                           </div>
-                        </div>
                         </div>
                       </div>
                     );
