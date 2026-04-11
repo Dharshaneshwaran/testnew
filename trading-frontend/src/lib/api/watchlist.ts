@@ -1,6 +1,7 @@
-import { getEquityQuote } from '@/lib/api/market';
+import { getEquityQuote, getTimeSeries } from '@/lib/api/market';
 import { apiRequest } from '@/lib/api/client';
 import { WatchlistFolderType, WatchlistItemType } from '@/types/watchlist';
+import { PricePoint } from '@/types/market';
 
 interface ApiWatchlistItem {
   id: string;
@@ -29,21 +30,26 @@ export async function getWatchlistFolders(token: string): Promise<WatchlistFolde
     new Set(folders.flatMap((folder) => folder.items.map((item) => item.symbol))),
   );
 
-  const quoteMap = new Map<string, { ltp: number; change: number; changePercent: number }>();
+  const quoteMap = new Map<string, { ltp: number; change: number; changePercent: number; sparkline: PricePoint[] }>();
   await Promise.all(
     symbols.map(async (symbol) => {
       try {
-        const quote = await getEquityQuote(symbol);
+        const [quote, sparkline] = await Promise.all([
+          getEquityQuote(symbol),
+          getTimeSeries('equity', symbol, { range: '1d', interval: '30m' }),
+        ]);
         quoteMap.set(symbol, {
           ltp: quote.price,
           change: quote.change,
           changePercent: quote.changePercent,
+          sparkline,
         });
       } catch {
         quoteMap.set(symbol, {
           ltp: 0,
           change: 0,
           changePercent: 0,
+          sparkline: [],
         });
       }
     }),
@@ -57,6 +63,7 @@ export async function getWatchlistFolders(token: string): Promise<WatchlistFolde
         ltp: 0,
         change: 0,
         changePercent: 0,
+        sparkline: [],
       };
 
       return {
@@ -65,7 +72,64 @@ export async function getWatchlistFolders(token: string): Promise<WatchlistFolde
         ltp: quote.ltp,
         change: quote.change,
         changePercent: quote.changePercent,
+        sparkline: quote.sparkline,
       };
     }),
   }));
+}
+export async function createWatchlistFolder(
+  token: string,
+  name: string,
+): Promise<WatchlistFolderType> {
+  const folder = await apiRequest<ApiWatchlistFolder>(
+    '/watchlist/folders',
+    {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    },
+    token,
+  );
+
+  return {
+    id: folder.id,
+    name: folder.name,
+    items: [],
+  };
+}
+
+export async function addWatchlistItem(
+  token: string,
+  folderId: string,
+  symbol: string,
+  exchange?: string,
+): Promise<WatchlistItemType> {
+  const item = await apiRequest<ApiWatchlistItem>(
+    '/watchlist/items',
+    {
+      method: 'POST',
+      body: JSON.stringify({ folderId, symbol, exchange }),
+    },
+    token,
+  );
+
+  const quote = await getEquityQuote(symbol);
+
+  return {
+    symbol: item.symbol,
+    exchange: normalizeExchange(item.exchange),
+    ltp: quote.price,
+    change: quote.change,
+    changePercent: quote.changePercent,
+  };
+}
+
+export async function deleteWatchlistItem(
+  token: string,
+  itemId: string,
+): Promise<{ success: boolean }> {
+  return apiRequest<{ success: boolean }>(
+    `/watchlist/items/${itemId}`,
+    { method: 'DELETE' },
+    token,
+  );
 }

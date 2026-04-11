@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ChevronDown, Maximize2, Plus } from "lucide-react";
 
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Header } from "@/components/layout/Header";
@@ -163,7 +164,7 @@ export default function DashboardPage() {
           {loading && <p className="text-sm text-zinc-500">Loading market tickers...</p>}
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-[1.6fr_1fr_320px]">
+        <section className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
           <div className="space-y-4">
             <Card>
               <CardHeader>
@@ -263,19 +264,6 @@ export default function DashboardPage() {
                     ltp={item.ltp}
                     changePercent={item.changePercent}
                   />
-                ))}
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="space-y-3">
-            <Card>
-              <CardHeader>
-                <CardTitle>Watchlist</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {watchlistFolders.map((folder) => (
-                  <WatchlistFolder key={folder.id} folder={folder} />
                 ))}
               </CardContent>
             </Card>

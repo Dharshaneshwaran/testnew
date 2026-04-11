@@ -100,25 +100,18 @@ export function Header({ title, subtitle }: { title: string; subtitle: string })
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/8 bg-[#0c0d12]/95 px-5 py-4 backdrop-blur-xl lg:px-6">
-      <div className="flex flex-col gap-4">
+    <header className="sticky top-0 z-40 border-b border-white/8 bg-[#0c0d12]/95 py-4 backdrop-blur-xl">
+      <div className="flex flex-col gap-4 px-2 lg:px-4">
         <div className="flex items-center gap-4">
-          <div className="flex min-w-0 items-center gap-2">
-            <div className="text-[22px] font-medium tracking-[-0.04em] text-white">
-              Ruroxz <span className="font-normal text-white/70">Finance</span>
-            </div>
-            <span className="rounded-md border border-white/20 px-1.5 py-0.5 text-[11px] text-white/85">
-              Beta
-            </span>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              className="hidden h-9 items-center gap-2 rounded-full bg-white/[0.06] px-5 text-sm text-white/90 lg:inline-flex"
+            >
+              India
+              <ChevronDown className="h-4 w-4 text-white/70" />
+            </button>
           </div>
-
-          <button
-            type="button"
-            className="hidden h-9 items-center gap-2 rounded-full bg-white/[0.06] px-5 text-sm text-white/90 lg:inline-flex"
-          >
-            India
-            <ChevronDown className="h-4 w-4 text-white/70" />
-          </button>
 
           <div className="hidden min-w-0 flex-1 items-center gap-3 xl:flex">
             {tickers.map((ticker) => (
