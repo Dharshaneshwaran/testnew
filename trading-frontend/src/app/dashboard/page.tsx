@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { ChevronDown, Maximize2, Plus, Monitor, LayoutGrid, Layout } from "lucide-react";
-import { DndContext, useDroppable, DragEndEvent } from "@dnd-kit/core";
+import { useDroppable } from "@dnd-kit/core";
 
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useDashboard } from "@/context/DashboardContext";
@@ -147,16 +147,6 @@ export default function DashboardPage() {
     };
   }, [mode, token, REFRESH_RATE]);
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { over, active } = event;
-    if (over && active.data.current?.symbol) {
-      const slotIndex = over.data.current?.index;
-      if (typeof slotIndex === "number") {
-        setSlot(slotIndex, active.data.current.symbol);
-      }
-    }
-  }
-
   return (
     <main className="min-h-screen bg-[#07080a]">
       <Header 
@@ -165,25 +155,23 @@ export default function DashboardPage() {
       />
       
       {mode === "classic" ? (
-        <DndContext onDragEnd={handleDragEnd}>
-          <div className="px-4 py-6 lg:px-8">
-            <div className="flex items-center gap-3 mb-6">
-              <Monitor className="h-5 w-5 text-blue-400" />
-              <h2 className="text-xl font-bold text-white tracking-tight">Active Terminal (4 Stocks Max)</h2>
-            </div>
-
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {dashboardStocks.map((symbol, idx) => (
-                <DashboardSlot 
-                  key={idx} 
-                  index={idx} 
-                  symbol={symbol} 
-                  onClose={() => setSlot(idx, null)} 
-                />
-              ))}
-            </div>
+        <div className="px-4 py-6 lg:px-8">
+          <div className="flex items-center gap-3 mb-6">
+            <Monitor className="h-5 w-5 text-blue-400" />
+            <h2 className="text-xl font-bold text-white tracking-tight">Active Terminal (4 Stocks Max)</h2>
           </div>
-        </DndContext>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            {dashboardStocks.map((symbol, idx) => (
+              <DashboardSlot 
+                key={idx} 
+                index={idx} 
+                symbol={symbol} 
+                onClose={() => setSlot(idx, null)} 
+              />
+            ))}
+          </div>
+        </div>
         ) : (
           <div className="px-4 py-6 lg:px-8 space-y-4">
             {error && <p className="text-sm text-red-400">{error}</p>}

@@ -44,23 +44,34 @@ export function WatchlistItem({ item, onRemove }: { item: WatchlistItemType; onR
     <div 
       ref={setNodeRef}
       style={style}
+      {...(mode === "classic" ? listeners : {})}
+      {...(mode === "classic" ? attributes : {})}
       className={cn(
         "group flex items-center gap-2",
+        mode === "classic" && "cursor-grab active:cursor-grabbing",
         isDragging && "opacity-50 ring-2 ring-blue-500/50 rounded-lg"
       )}
     >
       {mode === "classic" && (
         <div 
-          {...listeners}
-          {...attributes}
-          className="flex-shrink-0 p-1 text-white/30 hover:text-white/60 cursor-grab active:cursor-grabbing"
+          className="flex-shrink-0 p-1 text-white/30 hover:text-white/60"
         >
           <GripVertical className="h-4 w-4" />
         </div>
       )}
       <Link
         href={`/dashboard/symbol/${item.symbol}`}
-        className="flex-1 block px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer hover:bg-white/[0.08] hover:border hover:border-white/[0.1]"
+        onClick={(e) => {
+          // Prevent navigation during drag
+          if (isDragging) {
+            e.preventDefault();
+          }
+        }}
+        className={cn(
+          "flex-1 block px-3 py-2 rounded-lg transition-all duration-200",
+          !isDragging && "cursor-pointer hover:bg-white/[0.08] hover:border hover:border-white/[0.1]",
+          isDragging && "pointer-events-none"
+        )}
       >
         <div className="flex items-center gap-3">
           <div className="w-16 flex-shrink-0">
