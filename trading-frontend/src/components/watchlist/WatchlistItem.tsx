@@ -12,7 +12,7 @@ export function WatchlistItem({ item, onRemove }: { item: WatchlistItemType; onR
   const [isRemoving, setIsRemoving] = useState(false);
   const { mode } = useDashboard();
 
-  const { setNodeRef, isDragging, transform } = useDraggable({
+  const { setNodeRef, isDragging, transform, attributes, listeners } = useDraggable({
     id: `watchlist-${item.symbol}`,
     data: { symbol: item.symbol },
   });
@@ -50,7 +50,11 @@ export function WatchlistItem({ item, onRemove }: { item: WatchlistItemType; onR
       )}
     >
       {mode === "classic" && (
-        <div className="flex-shrink-0 p-1 text-white/30 hover:text-white/60 cursor-grab active:cursor-grabbing">
+        <div 
+          {...listeners}
+          {...attributes}
+          className="flex-shrink-0 p-1 text-white/30 hover:text-white/60 cursor-grab active:cursor-grabbing"
+        >
           <GripVertical className="h-4 w-4" />
         </div>
       )}

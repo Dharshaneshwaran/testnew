@@ -20,11 +20,11 @@ export function WatchlistFolder({ folder }: { folder: WatchlistFolderType }) {
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const DEFAULT_SUGGESTIONS = [
-    { hint: "NIFTY 50", label: "NSE", route: "/index/nifty", keywords: ["NIFTY"] },
-    { hint: "SENSEX", label: "BSE", route: "/index/sensex", keywords: ["SENSEX"] },
-    { hint: "RELIANCE", label: "NSE", route: "/stock/reliance", keywords: ["Reliance Industries"] },
-    { hint: "TCS", label: "NSE", route: "/stock/tcs", keywords: ["Tata Consultancy Services"] },
-    { hint: "HDFCBANK", label: "NSE", route: "/stock/hdfcbank", keywords: ["HDFC Bank"] },
+    { hint: "NIFTY 50", label: "NSE", route: "/index/nifty", keywords: ["NIFTY"], symbol: "NIFTY" },
+    { hint: "SENSEX", label: "BSE", route: "/index/sensex", keywords: ["SENSEX"], symbol: "SENSEX" },
+    { hint: "RELIANCE", label: "NSE", route: "/stock/reliance", keywords: ["Reliance Industries"], symbol: "RELIANCE" },
+    { hint: "TCS", label: "NSE", route: "/stock/tcs", keywords: ["Tata Consultancy Services"], symbol: "TCS" },
+    { hint: "HDFCBANK", label: "NSE", route: "/stock/hdfcbank", keywords: ["HDFC Bank"], symbol: "HDFCBANK" },
   ];
 
   const performSearch = async (query: string) => {
@@ -68,10 +68,22 @@ export function WatchlistFolder({ folder }: { folder: WatchlistFolderType }) {
     }, 300);
   };
 
-  const handleAdd = async (symbol: string) => {
+  const handleAdd = async (hint: string, resultSymbol?: string) => {
     if (!token) return;
+    
+    // Find the actual symbol (use provided symbol or extract from hint)
+    let symbol = resultSymbol || hint;
+    
+    // Extract symbol from common names
+    const symbolMap: Record<string, string> = {
+      "NIFTY 50": "NIFTY",
+      "BSE SENSEX": "SENSEX",
+      "NIFTY BANK": "BANKNIFTY",
+    };
+    symbol = symbolMap[hint] || symbol;
+    
     if (folder.items.some((item) => item.symbol === symbol)) {
-      alert("This symbol is already in the watchlist.");
+      alert(`${symbol} is already in this watchlist.`);
       return;
     }
     try {
@@ -166,7 +178,7 @@ export function WatchlistFolder({ folder }: { folder: WatchlistFolderType }) {
                   {results.map((result) => (
                     <div key={result.route} className="flex items-center gap-4 p-4 hover:bg-white/[0.04] transition-colors border-b border-white/5 last:border-0 group/item">
                       <button
-                        onClick={() => handleAdd(result.hint)}
+                        onClick={() => handleAdd(result.hint, result.symbol || result.hint)}
                         className="flex h-7 w-7 items-center justify-center rounded-full text-blue-500 hover:bg-blue-500/20 active:scale-95 transition"
                       >
                         <Plus className="h-5 w-5" />
