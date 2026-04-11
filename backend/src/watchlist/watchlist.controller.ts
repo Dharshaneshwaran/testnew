@@ -52,4 +52,12 @@ export class WatchlistController {
   deleteItem(@CurrentUser() user: { id: string }, @Param('id') id: string) {
     return this.watchlistService.deleteItem(user.id, id);
   }
+
+  @Post('items/remove')
+  removeItem(
+    @CurrentUser() user: { id: string },
+    @Body() dto: { folderId: string; symbol: string },
+  ) {
+    return this.watchlistService.removeItemBySymbol(user.id, dto.folderId, dto.symbol);
+  }
 }

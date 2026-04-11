@@ -90,4 +90,27 @@ export class WatchlistService {
     await this.prisma.watchlistItem.delete({ where: { id: itemId } });
     return { success: true };
   }
+
+  async removeItemBySymbol(userId: string, folderId: string, symbol: string) {
+    const folder = await this.prisma.watchlistFolder.findUnique({
+      where: { id: folderId },
+    });
+
+    if (!folder) {
+      throw new NotFoundException('Watchlist folder not found');
+    }
+
+    if (folder.userId !== userId) {
+      throw new ForbiddenException('Cannot remove item from this folder');
+    }
+
+    await this.prisma.watchlistItem.deleteMany({
+      where: {
+        folderId,
+        symbol: symbol.toUpperCase(),
+      },
+    });
+
+    return { success: true };
+  }
 }
