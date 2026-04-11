@@ -112,7 +112,19 @@ export async function addWatchlistItem(
     token,
   );
 
-  const quote = await getEquityQuote(symbol);
+  let quote;
+  try {
+    quote = await getEquityQuote(symbol);
+  } catch (err) {
+    console.warn(`Failed to fetch quote for ${symbol} after adding:`, err);
+    return {
+      symbol: item.symbol,
+      exchange: normalizeExchange(item.exchange),
+      ltp: 0,
+      change: 0,
+      changePercent: 0,
+    };
+  }
 
   return {
     symbol: item.symbol,
