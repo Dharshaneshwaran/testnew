@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, ChevronRight } from "lucide-react";
 import { WatchlistItemType } from "@/types/watchlist";
 import { MiniSparkline } from "@/components/charts/MiniSparkline";
 import { cn } from "@/lib/utils";
@@ -10,11 +10,11 @@ export function WatchlistItem({ item }: { item: WatchlistItemType }) {
   return (
     <Link
       href={`/dashboard/symbol/${item.symbol}`}
-      className="block px-2 py-1.5 transition hover:bg-white/[0.04]"
+      className="group block px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer hover:bg-white/[0.08] hover:border hover:border-white/[0.1]"
     >
       <div className="flex items-center gap-3">
         <div className="w-16 flex-shrink-0">
-          <p className="text-sm font-semibold text-zinc-100">{item.symbol}</p>
+          <p className="text-sm font-semibold text-zinc-100 group-hover:text-white transition-colors">{item.symbol}</p>
           <p className="text-[10px] text-zinc-500 truncate">{item.exchange}</p>
         </div>
         
@@ -37,6 +37,8 @@ export function WatchlistItem({ item }: { item: WatchlistItemType }) {
             <span>{isUp ? "+" : ""}{item.changePercent.toFixed(2)}%</span>
           </div>
         </div>
+
+        <ChevronRight className="h-4 w-4 text-zinc-500 group-hover:text-zinc-400 transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100" />
       </div>
     </Link>
   );

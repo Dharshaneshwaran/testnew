@@ -37,6 +37,7 @@ export function TradingChart({ data }: { data: PricePoint[] }) {
         background: { color: "#161820" },
         textColor: "rgba(255,255,255,0.58)",
         fontFamily: '"Google Sans", "Segoe UI", sans-serif',
+        attributionLogo: false,
       },
       grid: {
         vertLines: { color: "rgba(255,255,255,0.07)" },

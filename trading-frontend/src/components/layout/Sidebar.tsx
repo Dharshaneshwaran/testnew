@@ -25,6 +25,7 @@ export function Sidebar() {
   const { token } = useAuth();
   const [watchlistFolders, setWatchlistFolders] = useState<WatchlistFolderType[]>([]);
   const [sectorRows, setSectorRows] = useState<LiveSectorRow[]>([]);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -51,8 +52,21 @@ export function Sidebar() {
 
     void loadWatchlists();
 
+    const handleUpdate = () => {
+      void loadWatchlists();
+    };
+    
+    const handleToggle = () => {
+      setMobileOpen(prev => !prev);
+    };
+
+    window.addEventListener("watchlist-updated", handleUpdate);
+    window.addEventListener("toggle-sidebar", handleToggle);
+
     return () => {
       active = false;
+      window.removeEventListener("watchlist-updated", handleUpdate);
+      window.removeEventListener("toggle-sidebar", handleToggle);
     };
   }, [token]);
 
@@ -84,12 +98,29 @@ export function Sidebar() {
   }, []);
 
   return (
-    <aside className="hidden w-[360px] shrink-0 border-r border-white/8 bg-[#0d0f14] px-6 py-8 lg:block overflow-y-auto">
-      <div className="mb-12">
-        <h1 className="text-[24px] font-semibold tracking-[-0.04em] text-white">
-          Ruroxz <span className="font-normal text-white/70">Finance</span>
-        </h1>
-      </div>
+    <>
+      {mobileOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+      <aside className={cn(
+        "fixed inset-y-0 left-0 z-50 w-[300px] sm:w-[360px] shrink-0 border-r border-white/8 bg-[#0d0f14] px-6 py-8 overflow-y-auto transition-transform duration-300 lg:static lg:block lg:translate-x-0",
+        mobileOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="mb-12 flex items-center justify-between">
+          <h1 className="text-[24px] font-semibold tracking-[-0.04em] text-white">
+            Ruroxz <span className="font-normal text-white/70">Finance</span>
+          </h1>
+          <button 
+            type="button" 
+            className="lg:hidden text-white/70"
+            onClick={() => setMobileOpen(false)}
+          >
+            ✕
+          </button>
+        </div>
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1 group cursor-pointer">
@@ -167,6 +198,7 @@ export function Sidebar() {
         </div>
       </section>
     </aside>
+    </>
   );
 }
 

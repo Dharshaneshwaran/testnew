@@ -3,7 +3,7 @@
 import { Plus, Check, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { addWatchlistItem, getWatchlistFolders } from "@/lib/api/watchlist";
+import { addWatchlistItem, getWatchlistFolders, createWatchlistFolder } from "@/lib/api/watchlist";
 import { cn } from "@/lib/utils";
 
 interface WatchlistAddButtonProps {
@@ -28,22 +28,18 @@ export function WatchlistAddButton({ symbol, exchange, className }: WatchlistAdd
 
     setLoading(true);
     try {
-      // For simplicity, add to the first folder. 
-      // In a full implementation, this could show a dropdown.
-      const folders = await getWatchlistFolders(token);
+      let folders = await getWatchlistFolders(token);
       let targetFolderId = folders[0]?.id;
 
       if (!targetFolderId) {
-        // Handle case where no folders exist? 
-        // For now, assume a default folder exists or should be created.
-        // But the user's requirement is the "+" icon functionality.
-        console.error("No watchlist folders found");
-        return;
+        // Create a default folder if none exist
+        const defaultFolder = await createWatchlistFolder(token, "My Watchlist");
+        targetFolderId = defaultFolder.id;
       }
 
       await addWatchlistItem(token, targetFolderId, symbol, exchange);
       setAdded(true);
-      setTimeout(() => setAdded(false), 2000);
+      window.dispatchEvent(new Event("watchlist-updated"));
     } catch (error) {
       console.error("Failed to add to watchlist:", error);
     } finally {

@@ -70,6 +70,10 @@ export function WatchlistFolder({ folder }: { folder: WatchlistFolderType }) {
 
   const handleAdd = async (symbol: string) => {
     if (!token) return;
+    if (folder.items.some((item) => item.symbol === symbol)) {
+      alert("This symbol is already in the watchlist.");
+      return;
+    }
     try {
       await addWatchlistItem(token, folder.id, symbol, "NSE");
       // For immediate feedback in this demo, you could optimistically add to folder.items
@@ -173,8 +177,8 @@ export function WatchlistFolder({ folder }: { folder: WatchlistFolderType }) {
             {folder.items.length === 0 ? (
               !isEditing && <p className="px-4 py-2 text-sm text-zinc-500 italic">This list is empty</p>
             ) : (
-              folder.items.map((item) => (
-                <WatchlistItem key={`${folder.id}-${item.symbol}`} item={item} />
+              folder.items.map((item, index) => (
+                <WatchlistItem key={`${folder.id}-${item.symbol}-${index}`} item={item} />
               ))
             )}
           </div>
