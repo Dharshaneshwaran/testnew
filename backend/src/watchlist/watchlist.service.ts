@@ -124,4 +124,21 @@ export class WatchlistService {
 
     return { success: true };
   }
+
+  async deleteFolder(userId: string, folderId: string) {
+    const folder = await this.prisma.watchlistFolder.findUnique({
+      where: { id: folderId },
+    });
+
+    if (!folder) {
+      throw new NotFoundException('Watchlist folder not found');
+    }
+
+    if (folder.userId !== userId) {
+      throw new ForbiddenException('Cannot delete this watchlist folder');
+    }
+
+    await this.prisma.watchlistFolder.delete({ where: { id: folderId } });
+    return { success: true };
+  }
 }

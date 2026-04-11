@@ -45,21 +45,6 @@ async function main() {
       where: { userId: user.id },
     });
 
-    const watchlist = await prisma.watchlistFolder.create({
-      data: {
-        userId: user.id,
-        name: "Core Watchlist",
-        items: {
-          create: [
-            { symbol: "RELIANCE", exchange: "NSE" },
-            { symbol: "HDFCBANK", exchange: "NSE" },
-            { symbol: "TCS", exchange: "NSE" },
-            { symbol: "SBIN", exchange: "NSE" },
-          ],
-        },
-      },
-    });
-
     await prisma.watchlistFolder.create({
       data: {
         userId: user.id,
@@ -100,8 +85,7 @@ async function main() {
             email,
             password,
           },
-          createdFolders: ["Core Watchlist", "Indices"],
-          primaryFolderId: watchlist.id,
+          createdFolders: ["Indices"],
         },
         null,
         2,
