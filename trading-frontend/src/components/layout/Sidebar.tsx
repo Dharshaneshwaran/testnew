@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, Expand, ListPlus, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { WatchlistFolder } from "@/components/watchlist/WatchlistFolder";
 
 import { useAuth } from "@/components/auth/AuthProvider";
 import { MiniSparkline } from "@/components/charts/MiniSparkline";
@@ -82,23 +84,23 @@ export function Sidebar() {
   }, []);
 
   return (
-    <aside className="hidden w-[360px] shrink-0 border-r border-white/8 bg-[#0d0f14] px-6 py-5 lg:block">
+    <aside className="hidden w-[360px] shrink-0 border-r border-white/8 bg-[#0d0f14] px-6 py-8 lg:block overflow-y-auto">
+      <div className="mb-12">
+        <h1 className="text-[24px] font-semibold tracking-[-0.04em] text-white">
+          Ruroxz <span className="font-normal text-white/70">Finance</span>
+        </h1>
+      </div>
+
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h2 className="text-[21px] font-medium tracking-[-0.03em] text-white">Lists</h2>
-          <button
-            type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-full border-[3px] border-[#6eb9ff] text-white/90"
-            aria-label="Open lists"
-          >
-            <ChevronDown className="h-4 w-4" />
-          </button>
+        <div className="flex items-center gap-1 group cursor-pointer">
+          <h2 className="text-[21px] font-medium tracking-[-0.03em] text-white group-hover:text-white/90">Lists</h2>
+          <ChevronDown className="h-4 w-4 text-white/50 group-hover:text-white/70" />
         </div>
         <div className="flex items-center gap-4 text-white/72">
-          <button type="button" aria-label="New list">
+          <button type="button" aria-label="New list" className="hover:text-white transition-colors">
             <ListPlus className="h-5 w-5" />
           </button>
-          <button type="button" aria-label="Expand">
+          <button type="button" aria-label="Expand" className="hover:text-white transition-colors">
             <Expand className="h-4 w-4" />
           </button>
         </div>
@@ -107,50 +109,27 @@ export function Sidebar() {
       <div className="mt-4 h-px bg-white/10" />
 
       <section className="pt-7">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between px-2 mb-2">
           <h3 className="text-[17px] font-medium text-white">Watchlist</h3>
           <div className="flex items-center gap-4 text-white/72">
-            <button type="button" aria-label="Add to watchlist">
+            <button type="button" aria-label="Add to watchlist" className="hover:text-white transition-colors">
               <Plus className="h-5 w-5" />
             </button>
-            <button type="button" aria-label="Collapse watchlist">
+            <button type="button" aria-label="Collapse watchlist" className="hover:text-white transition-colors">
               <ChevronUp className="h-4 w-4" />
             </button>
           </div>
         </div>
 
-        {watchlistFolders.length === 0 ? (
-          <p className="mt-4 text-[15px] text-white/50">This list is empty</p>
-        ) : (
-          <div className="mt-4 space-y-5">
-            {watchlistFolders.slice(0, 2).map((folder) => (
-              <div key={folder.id}>
-                <p className="text-[14px] font-medium text-white/92">{folder.name}</p>
-                <div className="mt-3 space-y-3">
-                  {folder.items.slice(0, 4).map((item) => (
-                    <Link
-                      key={`${folder.id}-${item.symbol}`}
-                      href={`/dashboard/symbol/${item.symbol}`}
-                      className="flex items-center justify-between gap-4 text-sm"
-                    >
-                      <div>
-                        <p className="text-white">{item.symbol}</p>
-                        <p className="mt-0.5 text-white/45">{item.exchange}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-white">{formatPrice(item.ltp)}</p>
-                        <p className={item.changePercent >= 0 ? "text-[#8ee78f]" : "text-[#f28b82]"}>
-                          {item.changePercent >= 0 ? "+" : ""}
-                          {item.changePercent.toFixed(2)}%
-                        </p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="space-y-1">
+          {watchlistFolders.length === 0 ? (
+            <p className="px-4 py-2 text-[15px] text-white/50 italic">This list is empty</p>
+          ) : (
+            watchlistFolders.map((folder) => (
+              <WatchlistFolder key={folder.id} folder={folder} />
+            ))
+          )}
+        </div>
       </section>
 
       <section className="pt-10">

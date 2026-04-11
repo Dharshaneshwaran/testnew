@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { WatchlistAddButton } from "@/components/watchlist/WatchlistAddButton";
 
 export function MarketCard({
   symbol,
@@ -20,8 +21,13 @@ export function MarketCard({
     <Link href={`/dashboard/symbol/${symbol}`}>
       <Card className="transition duration-200 hover:border-white/20">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm text-zinc-200">{symbol}</CardTitle>
-        <p className="text-xs text-zinc-500">{name}</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle className="text-sm text-zinc-200">{symbol}</CardTitle>
+            <p className="text-xs text-zinc-500">{name}</p>
+          </div>
+          <WatchlistAddButton symbol={symbol} />
+        </div>
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-between">
