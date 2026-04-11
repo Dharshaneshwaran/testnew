@@ -5,9 +5,6 @@ import {
   Check,
   ChevronDown,
   Menu,
-  MessageSquareText,
-  Moon,
-  Sun,
   Search,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
@@ -38,7 +35,6 @@ export function Header({ title, subtitle }: { title: string; subtitle: string })
   const [suggestions, setSuggestions] = useState<MarketSearchItem[]>([]);
   const [tickers, setTickers] = useState<Ticker[]>([]);
   const [isBeta, setIsBeta] = useState(true);
-  const [isDark, setIsDark] = useState(true);
   const [isPending, startTransition] = useTransition();
   const normalizedQuery = searchQuery.trim();
 
@@ -208,29 +204,6 @@ export function Header({ title, subtitle }: { title: string; subtitle: string })
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                const nextDark = !isDark;
-                setIsDark(nextDark);
-                if (nextDark) {
-                  document.documentElement.classList.add('dark');
-                } else {
-                  document.documentElement.classList.remove('dark');
-                }
-              }}
-              className="hidden h-10 w-10 items-center justify-center rounded-full text-white/75 transition hover:bg-white/[0.05] lg:inline-flex"
-              aria-label="Theme"
-            >
-              {isDark ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-            </button>
-            <button
-              type="button"
-              className="hidden h-10 w-10 items-center justify-center rounded-full text-white/75 transition hover:bg-white/[0.05] lg:inline-flex"
-              aria-label="Notes"
-            >
-              <MessageSquareText className="h-5 w-5" />
-            </button>
             <button
               type="button"
               className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-[radial-gradient(circle_at_30%_30%,#56d36c,#16381c)] text-sm font-semibold text-white shadow-[0_0_0_1px_rgba(255,255,255,0.08)]"

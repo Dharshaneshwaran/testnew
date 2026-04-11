@@ -68,10 +68,22 @@ export default function DashboardPage() {
 
       try {
         const [indexQuotes, relianceQuote, moversResponse, sectorsResponse] = await Promise.all([
-          getIndexQuotes(INDEX_CONFIG.map((item) => item.symbol)),
-          getEquityQuote("RELIANCE"),
-          getMovers(),
-          getSectors(),
+          getIndexQuotes(INDEX_CONFIG.map((item) => item.symbol)).catch((err) => {
+            console.warn(err);
+            return [];
+          }),
+          getEquityQuote("RELIANCE").catch((err) => {
+            console.warn(err);
+            return null;
+          }),
+          getMovers().catch((err) => {
+            console.warn(err);
+            return { gainers: [], losers: [] };
+          }),
+          getSectors().catch((err) => {
+            console.warn(err);
+            return [];
+          }),
         ]);
 
         if (!active) {
@@ -90,27 +102,29 @@ export default function DashboardPage() {
                 await getTimeSeries("index", item.symbol, {
                   range: "1d",
                   interval: "30m",
-                }),
+                }).catch(() => []),
               ]),
             ),
           ),
         );
 
-        setSelectedStock({
-          symbol: relianceQuote.symbol,
-          name: "Reliance Industries Ltd.",
-          price: relianceQuote.price,
-          change: relianceQuote.change,
-          changePercent: relianceQuote.changePercent,
-          volume: relianceQuote.volume,
-          dayRange: `${relianceQuote.dayLow.toFixed(2)} - ${relianceQuote.dayHigh.toFixed(2)}`,
-        });
+        if (relianceQuote) {
+          setSelectedStock({
+            symbol: relianceQuote.symbol,
+            name: "Reliance Industries Ltd.",
+            price: relianceQuote.price,
+            change: relianceQuote.change,
+            changePercent: relianceQuote.changePercent,
+            volume: relianceQuote.volume,
+            dayRange: `${relianceQuote.dayLow.toFixed(2)} - ${relianceQuote.dayHigh.toFixed(2)}`,
+          });
+        }
 
         setChartPoints(
           await getTimeSeries("equity", "RELIANCE", {
             range: "1d",
             interval: "30m",
-          }),
+          }).catch(() => []),
         );
 
         setTopGainers(moversResponse.gainers);
