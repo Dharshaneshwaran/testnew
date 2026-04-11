@@ -19,6 +19,7 @@ export function WatchlistFolder({
   const [open, setOpen] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -107,12 +108,17 @@ export function WatchlistFolder({
   };
 
   const handleDeleteFolder = async () => {
-    if (!token) return;
+    if (!token || isDeleting) return;
+    setIsDeleting(true);
     try {
       await deleteWatchlistFolder(token, folder.id);
       window.dispatchEvent(new CustomEvent("watchlist-updated"));
-    } catch (err) {
-      console.error("Failed to delete folder", err);
+    } catch (err: any) {
+      if (err?.status !== 404) {
+        console.error("Failed to delete folder:", err?.message || "Unknown error");
+      }
+    } finally {
+      setIsDeleting(false);
     }
   };
 
