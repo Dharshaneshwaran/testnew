@@ -188,9 +188,20 @@ export async function deleteWatchlistFolder(
 
 export async function deleteAllWatchlistFolders(
   token: string,
-): Promise<void> {
-  const folders = await getWatchlistFolders(token);
-  await Promise.all(
-    folders.map((folder) => deleteWatchlistFolder(token, folder.id)),
-  );
+): Promise<{ success: boolean }> {
+  // Prefer a single backend endpoint if available, but fall back to deleting
+  // folders individually for older backends.
+  try {
+    return await apiRequest<{ success: boolean }>(
+      '/watchlist/folders',
+      { method: 'DELETE' },
+      token,
+    );
+  } catch {
+    const folders = await getWatchlistFolders(token);
+    await Promise.all(
+      folders.map((folder) => deleteWatchlistFolder(token, folder.id)),
+    );
+    return { success: true };
+  }
 }

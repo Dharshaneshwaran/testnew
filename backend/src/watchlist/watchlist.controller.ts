@@ -65,4 +65,9 @@ export class WatchlistController {
   deleteFolder(@CurrentUser() user: { id: string }, @Param('id') id: string) {
     return this.watchlistService.deleteFolder(user.id, id);
   }
+
+  @Delete('folders')
+  deleteAllFolders(@CurrentUser() user: { id: string }) {
+    return this.watchlistService.deleteAllFolders(user.id);
+  }
 }
