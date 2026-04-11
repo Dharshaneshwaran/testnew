@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ChevronDown, ChevronUp, Expand, ListPlus, Plus, Trash2, GripVertical } from "lucide-react";
+import { ChevronDown, ChevronUp, Expand, ListPlus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WatchlistFolder } from "@/components/watchlist/WatchlistFolder";
 
@@ -13,7 +13,6 @@ import { getEquityQuote, getSectors, getTimeSeries } from "@/lib/api/market";
 import { getWatchlistFolders } from "@/lib/api/watchlist";
 import type { PricePoint, SectorCard } from "@/types/market";
 import type { WatchlistFolderType } from "@/types/watchlist";
-import { useDraggable } from "@dnd-kit/core";
 
 type LiveSectorRow = {
   symbol: string;
@@ -23,54 +22,13 @@ type LiveSectorRow = {
   sparkline: PricePoint[];
 };
 
-function DraggableStockItem({ symbol, onRemove }: { symbol: string; onRemove: (s: string) => void }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `classic-${symbol}`,
-    data: { symbol },
-  });
-
-  const style = transform
-    ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-        zIndex: 100,
-      }
-    : undefined;
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "group flex items-center justify-between gap-3 rounded-lg border border-white/5 bg-white/[0.03] p-3 transition-all hover:bg-white/[0.06]",
-        isDragging && "opacity-50 ring-2 ring-blue-500/50"
-      )}
-    >
-      <div className="flex items-center gap-3 min-w-0">
-        <div {...listeners} {...attributes} className="cursor-grab p-1 text-white/30 hover:text-white/60">
-          <GripVertical className="h-4 w-4" />
-        </div>
-        <span className="font-medium text-white">{symbol}</span>
-      </div>
-      <button
-        type="button"
-        onMouseDown={(e) => e.stopPropagation()} 
-        onClick={() => onRemove(symbol)}
-        className="opacity-0 group-hover:opacity-100 p-1.5 text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all"
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
-    </div>
-  );
-}
-
 export function Sidebar() {
   const { token } = useAuth();
-  const { mode, sidebarStocks, addSidebarStock, removeSidebarStock } = useDashboard();
+  const { mode } = useDashboard();
   const [watchlistFolders, setWatchlistFolders] = useState<WatchlistFolderType[]>([]);
   const [sectorRows, setSectorRows] = useState<LiveSectorRow[]>([]);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sectorsLoaded, setSectorsLoaded] = useState(false);
-  const [newStock, setNewStock] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -172,55 +130,26 @@ export function Sidebar() {
 
         {mode === "classic" ? (
           <section className="space-y-6 pt-2">
-            <div className="flex items-center justify-between px-2">
-              <h3 className="text-[17px] font-medium text-white">Desired Stocks</h3>
-              <Plus className="h-4 w-4 text-white/40" />
-            </div>
-
-            <div className="px-2">
-              <div className="relative group/input">
-                <input
-                  type="text"
-                  placeholder="Add stock (e.g. BTC)..."
-                  value={newStock}
-                  onChange={(e) => setNewStock(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      addSidebarStock(newStock);
-                      setNewStock("");
-                    }
-                  }}
-                  className="w-full rounded-lg border border-white/10 bg-white/[0.03] py-2.5 pl-3 pr-10 text-sm text-white placeholder:text-white/20 transition-all focus:border-blue-500/50 focus:bg-white/[0.05] focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    addSidebarStock(newStock);
-                    setNewStock("");
-                  }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-white/40 hover:text-white transition-colors"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1 group cursor-pointer">
+                <h2 className="text-[21px] font-medium tracking-[-0.03em] text-white group-hover:text-white/90">Watchlist</h2>
+                <ChevronDown className="h-4 w-4 text-white/50 group-hover:text-white/70" />
               </div>
+              <button type="button" aria-label="Add" className="hover:text-white transition-colors">
+                <Plus className="h-5 w-5 text-white/72" />
+              </button>
             </div>
 
-            <div className="space-y-2.5 px-2 max-h-[calc(100vh-320px)] overflow-y-auto no-scrollbar">
-              {sidebarStocks.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 px-4 text-center rounded-xl border border-dashed border-white/10 bg-white/[0.01]">
-                  <p className="text-sm text-white/40 italic">Your list is empty. Add some stocks above!</p>
-                </div>
+            <div className="space-y-1">
+              {watchlistFolders.length === 0 ? (
+                <p className="px-4 py-2 text-[15px] text-white/50 italic">No watchlists. Create one to get started!</p>
               ) : (
-                sidebarStocks.map((symbol) => (
-                  <DraggableStockItem 
-                    key={symbol} 
-                    symbol={symbol} 
-                    onRemove={removeSidebarStock}
-                  />
+                watchlistFolders.map((folder) => (
+                  <WatchlistFolder key={folder.id} folder={folder} />
                 ))
               )}
             </div>
-            
+
             <p className="px-3 text-[11px] text-white/30 uppercase tracking-widest font-semibold pt-4">
               Hold & Drag to Dashboard
             </p>

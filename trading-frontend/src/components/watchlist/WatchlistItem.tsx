@@ -1,13 +1,21 @@
 import Link from "next/link";
-import { ArrowDownRight, ArrowUpRight, ChevronRight, X } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, ChevronRight, X, GripVertical } from "lucide-react";
 import { WatchlistItemType } from "@/types/watchlist";
 import { MiniSparkline } from "@/components/charts/MiniSparkline";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { useDraggable } from "@dnd-kit/core";
+import { useDashboard } from "@/context/DashboardContext";
 
 export function WatchlistItem({ item, onRemove }: { item: WatchlistItemType; onRemove?: (itemId: string) => void | Promise<void> }) {
   const isUp = item.change >= 0;
   const [isRemoving, setIsRemoving] = useState(false);
+  const { mode } = useDashboard();
+
+  const { setNodeRef, isDragging, transform } = useDraggable({
+    id: `watchlist-${item.symbol}`,
+    data: { symbol: item.symbol },
+  });
 
   const handleRemove = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -25,8 +33,27 @@ export function WatchlistItem({ item, onRemove }: { item: WatchlistItemType; onR
     }
   };
 
+  const style = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        zIndex: 100,
+      }
+    : undefined;
+
   return (
-    <div className="group flex items-center gap-2">
+    <div 
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "group flex items-center gap-2",
+        isDragging && "opacity-50 ring-2 ring-blue-500/50 rounded-lg"
+      )}
+    >
+      {mode === "classic" && (
+        <div className="flex-shrink-0 p-1 text-white/30 hover:text-white/60 cursor-grab active:cursor-grabbing">
+          <GripVertical className="h-4 w-4" />
+        </div>
+      )}
       <Link
         href={`/dashboard/symbol/${item.symbol}`}
         className="flex-1 block px-3 py-2 rounded-lg transition-all duration-200 cursor-pointer hover:bg-white/[0.08] hover:border hover:border-white/[0.1]"

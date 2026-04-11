@@ -12,7 +12,6 @@ import { MarketCard } from "@/components/market/MarketCard";
 import { PriceTicker } from "@/components/market/PriceTicker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ClassicStockWidget } from "@/components/dashboard/ClassicStockWidget";
-import { ClassicSidebar } from "@/components/dashboard/ClassicSidebar";
 import {
   getEquityQuote,
   getIndexQuotes,
@@ -167,32 +166,21 @@ export default function DashboardPage() {
       
       {mode === "classic" ? (
         <DndContext onDragEnd={handleDragEnd}>
-          <div className="flex h-[calc(100vh-120px)]">
-            {/* Sidebar */}
-            <ClassicSidebar />
+          <div className="px-4 py-6 lg:px-8">
+            <div className="flex items-center gap-3 mb-6">
+              <Monitor className="h-5 w-5 text-blue-400" />
+              <h2 className="text-xl font-bold text-white tracking-tight">Active Terminal (4 Stocks Max)</h2>
+            </div>
 
-            {/* Main Content */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="px-6 py-4 border-b border-white/[0.1] flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Monitor className="h-5 w-5 text-blue-400" />
-                  <h2 className="text-xl font-bold text-white tracking-tight">Active Terminal (4 Stocks Max)</h2>
-                </div>
-                <div className="text-sm text-white/50">Drag stocks from left to add them</div>
-              </div>
-
-              <div className="flex-1 overflow-auto p-6">
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 auto-rows-max">
-                  {dashboardStocks.map((symbol, idx) => (
-                    <DashboardSlot 
-                      key={idx} 
-                      index={idx} 
-                      symbol={symbol} 
-                      onClose={() => setSlot(idx, null)} 
-                    />
-                  ))}
-                </div>
-              </div>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              {dashboardStocks.map((symbol, idx) => (
+                <DashboardSlot 
+                  key={idx} 
+                  index={idx} 
+                  symbol={symbol} 
+                  onClose={() => setSlot(idx, null)} 
+                />
+              ))}
             </div>
           </div>
         </DndContext>
