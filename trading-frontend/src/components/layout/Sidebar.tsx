@@ -9,7 +9,7 @@ import { WatchlistFolder } from "@/components/watchlist/WatchlistFolder";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { MiniSparkline } from "@/components/charts/MiniSparkline";
 import { getEquityQuote, getSectors, getTimeSeries } from "@/lib/api/market";
-import { createWatchlistFolder, getWatchlistFolders } from "@/lib/api/watchlist";
+import { createWatchlistFolder, getWatchlistFolders, deleteAllWatchlistFolders } from "@/lib/api/watchlist";
 import type { PricePoint, SectorCard } from "@/types/market";
 import type { WatchlistFolderType } from "@/types/watchlist";
 
@@ -95,6 +95,17 @@ export function Sidebar() {
     }
   };
 
+  const handleDeleteAllFolders = async () => {
+    if (!token) return;
+    if (!confirm("Are you sure you want to delete all lists? This cannot be undone.")) return;
+    try {
+      await deleteAllWatchlistFolders(token);
+      await refreshWatchlists();
+    } catch (err) {
+      console.error("Failed to delete all folders", err);
+    }
+  };
+
   useEffect(() => {
     let active = true;
 
@@ -166,7 +177,10 @@ export function Sidebar() {
               Recently visited
             </button>
             <div className="my-1 h-px bg-white/5" />
-            <button className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-400/10 transition-colors">
+            <button 
+              onClick={handleDeleteAllFolders}
+              className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-400/10 transition-colors"
+            >
               Delete all lists
             </button>
           </div>
