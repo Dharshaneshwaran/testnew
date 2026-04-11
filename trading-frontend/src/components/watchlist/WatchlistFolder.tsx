@@ -7,7 +7,7 @@ import { WatchlistItem } from "@/components/watchlist/WatchlistItem";
 import { WatchlistFolderType } from "@/types/watchlist";
 import { cn } from "@/lib/utils";
 import { searchMarket } from "@/lib/api/market";
-import { addWatchlistItem } from "@/lib/api/watchlist";
+import { addWatchlistItem, deleteWatchlistItem } from "@/lib/api/watchlist";
 import { useAuth } from "@/components/auth/AuthProvider";
 
 export function WatchlistFolder({ folder }: { folder: WatchlistFolderType }) {
@@ -82,6 +82,17 @@ export function WatchlistFolder({ folder }: { folder: WatchlistFolderType }) {
       window.dispatchEvent(new Event("watchlist-updated"));
     } catch (err) {
       console.error("Add failed", err);
+    }
+  };
+
+  const handleRemove = async (itemId: string) => {
+    if (!token) return;
+    try {
+      await deleteWatchlistItem(token, itemId);
+      window.dispatchEvent(new Event("watchlist-updated"));
+    } catch (err) {
+      console.error("Remove failed", err);
+      throw err;
     }
   };
 
@@ -183,7 +194,11 @@ export function WatchlistFolder({ folder }: { folder: WatchlistFolderType }) {
                   index === self.findIndex((t) => t.symbol === item.symbol)
                 )
                 .map((item) => (
-                  <WatchlistItem key={`${folder.id}-${item.symbol}`} item={item} />
+                  <WatchlistItem 
+                    key={`${folder.id}-${item.id}`} 
+                    item={item}
+                    onRemove={handleRemove}
+                  />
                 ))
             )}
           </div>

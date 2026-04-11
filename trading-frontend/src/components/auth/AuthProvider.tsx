@@ -111,12 +111,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       token,
       user,
       login(payload) {
+        console.log('AuthProvider: Login called with:', payload.user.email);
         setAuthToken(payload.accessToken);
         setToken(payload.accessToken);
         setUser(payload.user);
         setStatus("authenticated");
       },
       logout() {
+        console.log('AuthProvider: Logout called');
         clearAuthToken();
         setToken(null);
         setUser(null);

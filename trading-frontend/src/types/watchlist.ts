@@ -1,6 +1,7 @@
 import { PricePoint } from "./market";
 
 export interface WatchlistItemType {
+  id: string;
   symbol: string;
   exchange: "NSE" | "BSE";
   ltp: number;

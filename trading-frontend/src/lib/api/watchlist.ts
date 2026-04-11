@@ -73,6 +73,7 @@ export async function getWatchlistFolders(token: string): Promise<WatchlistFolde
         change: quote.change,
         changePercent: quote.changePercent,
         sparkline: quote.sparkline,
+        id: item.id,
       };
     }),
   }));
@@ -115,6 +116,7 @@ export async function addWatchlistItem(
   const quote = await getEquityQuote(symbol);
 
   return {
+    id: item.id,
     symbol: item.symbol,
     exchange: normalizeExchange(item.exchange),
     ltp: quote.price,
