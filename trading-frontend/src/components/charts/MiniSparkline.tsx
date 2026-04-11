@@ -4,10 +4,10 @@ import { AreaSeries, createChart, type UTCTimestamp } from "lightweight-charts";
 import { useEffect, useRef } from "react";
 
 export function MiniSparkline({
-  values,
+  points,
   trend,
 }: {
-  values: number[];
+  points: { time: string; value: number }[];
   trend: "up" | "down";
 }) {
   const chartRef = useRef<HTMLDivElement | null>(null);
@@ -45,7 +45,15 @@ export function MiniSparkline({
       priceLineVisible: false,
     });
 
-    series.setData(values.map((value, index) => ({ time: (index + 1) as UTCTimestamp, value })));
+    series.setData(
+      points.map((point, index) => ({
+        time: (
+          Math.floor(new Date(point.time).getTime() / 1000) || index + 1
+        ) as UTCTimestamp,
+        value: point.value,
+      })),
+    );
+    chart.timeScale().fitContent();
 
     const observer = new ResizeObserver(() => {
       if (!chartRef.current) {
@@ -60,7 +68,7 @@ export function MiniSparkline({
       observer.disconnect();
       chart.remove();
     };
-  }, [values, trend]);
+  }, [points, trend]);
 
   return <div ref={chartRef} className="h-[52px] w-full" />;
 }

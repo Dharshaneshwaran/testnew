@@ -1,10 +1,15 @@
+import Link from "next/link";
+
 import { WatchlistItemType } from "@/types/watchlist";
 
 export function WatchlistItem({ item }: { item: WatchlistItemType }) {
   const isUp = item.change >= 0;
 
   return (
-    <div className="rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2 transition hover:border-white/15 hover:bg-white/[0.04]">
+    <Link
+      href={`/dashboard/symbol/${item.symbol}`}
+      className="block rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2 transition hover:border-white/15 hover:bg-white/[0.04]"
+    >
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-semibold text-zinc-100">{item.symbol}</p>
@@ -18,6 +23,6 @@ export function WatchlistItem({ item }: { item: WatchlistItemType }) {
           </p>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

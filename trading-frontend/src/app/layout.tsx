@@ -1,16 +1,20 @@
 import type { Metadata } from "next";
 
+import { AuthProvider } from "@/components/auth/AuthProvider";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "TradeBoard Pro",
-  description: "Premium stock trading dashboard frontend UI",
+  title: "Ruroxz Finance Beta",
+  description: "Ruroxz Finance Beta market dashboard",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
-      <body className="min-h-screen bg-[#030507] text-zinc-100 antialiased">{children}</body>
+      <body className="min-h-screen bg-[#030507] text-zinc-100 antialiased">
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

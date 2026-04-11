@@ -1,28 +1,58 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const stockFutures = [
-  { contract: "RELIANCE APR FUT", ltp: 2962.5, oi: 187230, change: 1.21 },
-  { contract: "SBIN APR FUT", ltp: 825.2, oi: 214550, change: 2.03 },
-  { contract: "TCS APR FUT", ltp: 3952.1, oi: 162120, change: -1.09 },
-];
+import { getFutures } from "@/lib/api/market";
+import { FutureContract } from "@/types/market";
 
 export default function StockFuturesPage() {
+  const [contracts, setContracts] = useState<FutureContract[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        setContracts(await getFutures("stock"));
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : "Failed to load stock futures");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void load();
+  }, []);
+
   return (
     <main className="min-h-screen">
-      <Header title="Stock Futures" subtitle="Most active stock derivatives" />
+      <Header title="Stock Futures" subtitle="Most active stock derivatives from the backend API" />
       <div className="space-y-3 px-4 py-4 lg:px-6">
-        {stockFutures.map((row) => (
+        {error && <p className="text-sm text-red-400">{error}</p>}
+        {loading && <p className="text-sm text-zinc-500">Loading stock futures...</p>}
+        {!loading && !error && contracts.length === 0 && (
+          <p className="text-sm text-zinc-500">No stock futures data available right now.</p>
+        )}
+
+        {contracts.map((row) => (
           <Card key={row.contract}>
             <CardHeader>
               <CardTitle>{row.contract}</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-wrap items-center gap-6 text-sm">
-              <p className="text-zinc-100">LTP: {row.ltp.toFixed(2)}</p>
-              <p className="text-zinc-400">OI: {Intl.NumberFormat("en-IN").format(row.oi)}</p>
-              <p className={row.change >= 0 ? "text-emerald-400" : "text-red-400"}>
-                {row.change >= 0 ? "+" : ""}
-                {row.change.toFixed(2)}%
+            <CardContent className="grid gap-3 text-sm md:grid-cols-5">
+              <p className="text-zinc-100">LTP: ₹{row.price.toFixed(2)}</p>
+              <p className="text-zinc-400">
+                OI: {Intl.NumberFormat("en-IN").format(row.openInterest)}
+              </p>
+              <p className="text-zinc-400">
+                Volume: {Intl.NumberFormat("en-IN").format(row.volume)}
+              </p>
+              <p className="text-zinc-400">Basis: ₹{row.basis.toFixed(2)}</p>
+              <p className={row.changePercent >= 0 ? "text-emerald-400" : "text-red-400"}>
+                {row.changePercent >= 0 ? "+" : ""}
+                {row.changePercent.toFixed(2)}%
               </p>
             </CardContent>
           </Card>

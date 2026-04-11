@@ -2,9 +2,9 @@ import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 
 import { MiniSparkline } from "@/components/charts/MiniSparkline";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Ticker } from "@/types/market";
+import { PricePoint, Ticker } from "@/types/market";
 
-export function PriceTicker({ ticker, sparkline }: { ticker: Ticker; sparkline: number[] }) {
+export function PriceTicker({ ticker, sparkline }: { ticker: Ticker; sparkline: PricePoint[] }) {
   const isUp = ticker.change >= 0;
 
   return (
@@ -18,7 +18,7 @@ export function PriceTicker({ ticker, sparkline }: { ticker: Ticker; sparkline: 
       </CardHeader>
       <CardContent className="space-y-2">
         <div className="h-[52px]">
-          <MiniSparkline values={sparkline} trend={isUp ? "up" : "down"} />
+          <MiniSparkline points={sparkline} trend={isUp ? "up" : "down"} />
         </div>
         <p className={`flex items-center gap-1 text-xs ${isUp ? "text-emerald-400" : "text-red-400"}`}>
           {isUp ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}

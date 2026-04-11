@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +17,8 @@ export function MarketCard({
   const isUp = changePercent >= 0;
 
   return (
-    <Card className="transition duration-200 hover:border-white/20">
+    <Link href={`/dashboard/symbol/${symbol}`}>
+      <Card className="transition duration-200 hover:border-white/20">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm text-zinc-200">{symbol}</CardTitle>
         <p className="text-xs text-zinc-500">{name}</p>
@@ -31,6 +33,7 @@ export function MarketCard({
           </p>
         </div>
       </CardContent>
-    </Card>
+      </Card>
+    </Link>
   );
 }
