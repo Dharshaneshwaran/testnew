@@ -9,7 +9,7 @@ import { WatchlistFolder } from "@/components/watchlist/WatchlistFolder";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { MiniSparkline } from "@/components/charts/MiniSparkline";
 import { getEquityQuote, getSectors, getTimeSeries } from "@/lib/api/market";
-import { getWatchlistFolders } from "@/lib/api/watchlist";
+import { createWatchlistFolder, getWatchlistFolders } from "@/lib/api/watchlist";
 import type { PricePoint, SectorCard } from "@/types/market";
 import type { WatchlistFolderType } from "@/types/watchlist";
 
@@ -25,6 +25,18 @@ export function Sidebar() {
   const { token } = useAuth();
   const [watchlistFolders, setWatchlistFolders] = useState<WatchlistFolderType[]>([]);
   const [sectorRows, setSectorRows] = useState<LiveSectorRow[]>([]);
+  const [isAddingFolder, setIsAddingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+
+  const refreshWatchlists = async () => {
+    if (!token) return;
+    try {
+      const folders = await getWatchlistFolders(token);
+      setWatchlistFolders(folders);
+    } catch (err) {
+      console.error("Failed to refresh watchlists", err);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -55,6 +67,19 @@ export function Sidebar() {
       active = false;
     };
   }, [token]);
+
+  const handleCreateFolder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token || !newFolderName.trim()) return;
+    try {
+      await createWatchlistFolder(token, newFolderName);
+      setNewFolderName("");
+      setIsAddingFolder(false);
+      await refreshWatchlists();
+    } catch (err) {
+      console.error("Failed to create folder", err);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -92,12 +117,36 @@ export function Sidebar() {
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 group cursor-pointer">
-          <h2 className="text-[21px] font-medium tracking-[-0.03em] text-white group-hover:text-white/90">Lists</h2>
-          <ChevronDown className="h-4 w-4 text-white/50 group-hover:text-white/70" />
+        <div className="relative group">
+          <button 
+            type="button"
+            className="flex items-center gap-1 cursor-pointer group-hover:text-white/90 transition-colors"
+          >
+            <h2 className="text-[21px] font-medium tracking-[-0.03em] text-white">Lists</h2>
+            <ChevronDown className="h-4 w-4 text-white/50 group-hover:text-white/70" />
+          </button>
+          
+          {/* Dropdown Menu (Hidden by default, shown on group-hover for simplicity or you could add state) */}
+          <div className="absolute top-full left-0 mt-2 w-48 py-2 bg-zinc-900 border border-white/10 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+            <button className="w-full text-left px-4 py-2 text-sm text-zinc-300 hover:bg-white/10 transition-colors">
+              Manage lists
+            </button>
+            <button className="w-full text-left px-4 py-2 text-sm text-zinc-300 hover:bg-white/10 transition-colors">
+              Recently visited
+            </button>
+            <div className="my-1 h-px bg-white/5" />
+            <button className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-400/10 transition-colors">
+              Delete all lists
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-4 text-white/72">
-          <button type="button" aria-label="New list" className="hover:text-white transition-colors">
+          <button 
+            type="button" 
+            aria-label="New list" 
+            onClick={() => setIsAddingFolder(prev => !prev)}
+            className={cn("hover:text-white transition-colors", isAddingFolder && "text-blue-500")}
+          >
             <ListPlus className="h-5 w-5" />
           </button>
           <button type="button" aria-label="Expand" className="hover:text-white transition-colors">
@@ -108,11 +157,41 @@ export function Sidebar() {
 
       <div className="mt-4 h-px bg-white/10" />
 
+      {isAddingFolder && (
+        <form onSubmit={handleCreateFolder} className="mt-4 px-2">
+          <div className="relative flex items-center bg-zinc-800/40 rounded-xl border border-white/10 px-3 py-2.5 focus-within:border-blue-500/50 transition-colors">
+            <Plus className="h-4 w-4 text-zinc-500 mr-2" />
+            <input
+              type="text"
+              placeholder="List name"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              className="bg-transparent border-none outline-none text-sm text-zinc-100 w-full placeholder:text-zinc-500"
+              autoFocus
+            />
+            {newFolderName && (
+              <button type="submit" className="text-xs font-semibold text-blue-500 hover:text-blue-400">
+                Create
+              </button>
+            )}
+          </div>
+        </form>
+      )}
+
       <section className="pt-7">
         <div className="flex items-center justify-between px-2 mb-2">
           <h3 className="text-[17px] font-medium text-white">Watchlist</h3>
           <div className="flex items-center gap-4 text-white/72">
-            <button type="button" aria-label="Add to watchlist" className="hover:text-white transition-colors">
+            <button 
+              type="button" 
+              aria-label="Add to watchlist" 
+              className="hover:text-white transition-colors"
+              onClick={() => {
+                // If there are folders, trigger the first one's edit mode
+                // Since we can't easily trigger the child's state, we could just open New List
+                setIsAddingFolder(true);
+              }}
+            >
               <Plus className="h-5 w-5" />
             </button>
             <button type="button" aria-label="Collapse watchlist" className="hover:text-white transition-colors">
@@ -126,7 +205,11 @@ export function Sidebar() {
             <p className="px-4 py-2 text-[15px] text-white/50 italic">This list is empty</p>
           ) : (
             watchlistFolders.map((folder) => (
-              <WatchlistFolder key={folder.id} folder={folder} />
+              <WatchlistFolder 
+                key={folder.id} 
+                folder={folder} 
+                allFolders={watchlistFolders} 
+              />
             ))
           )}
         </div>

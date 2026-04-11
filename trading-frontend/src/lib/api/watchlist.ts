@@ -55,27 +55,38 @@ export async function getWatchlistFolders(token: string): Promise<WatchlistFolde
     }),
   );
 
-  return folders.map((folder) => ({
-    id: folder.id,
-    name: folder.name,
-    items: folder.items.map((item): WatchlistItemType => {
-      const quote = quoteMap.get(item.symbol) ?? {
-        ltp: 0,
-        change: 0,
-        changePercent: 0,
-        sparkline: [],
-      };
+  return folders.map((folder): WatchlistFolderType => {
+    // Deduplicate items by symbol
+    const seen = new Set();
+    const uniqueItems = folder.items.filter(item => {
+      const symbol = item.symbol.toUpperCase();
+      if (seen.has(symbol)) return false;
+      seen.add(symbol);
+      return true;
+    });
 
-      return {
-        symbol: item.symbol,
-        exchange: normalizeExchange(item.exchange),
-        ltp: quote.ltp,
-        change: quote.change,
-        changePercent: quote.changePercent,
-        sparkline: quote.sparkline,
-      };
-    }),
-  }));
+    return {
+      id: folder.id,
+      name: folder.name,
+      items: uniqueItems.map((item): WatchlistItemType => {
+        const quote = quoteMap.get(item.symbol) ?? {
+          ltp: 0,
+          change: 0,
+          changePercent: 0,
+          sparkline: [],
+        };
+
+        return {
+          symbol: item.symbol,
+          exchange: normalizeExchange(item.exchange),
+          ltp: quote.ltp,
+          change: quote.change,
+          changePercent: quote.changePercent,
+          sparkline: quote.sparkline,
+        };
+      }),
+    };
+  });
 }
 export async function createWatchlistFolder(
   token: string,
@@ -112,7 +123,19 @@ export async function addWatchlistItem(
     token,
   );
 
-  const quote = await getEquityQuote(symbol);
+  let quote;
+  try {
+    quote = await getEquityQuote(symbol);
+  } catch (err) {
+    console.warn(`Failed to fetch quote for ${symbol} after adding:`, err);
+    return {
+      symbol: item.symbol,
+      exchange: normalizeExchange(item.exchange),
+      ltp: 0,
+      change: 0,
+      changePercent: 0,
+    };
+  }
 
   return {
     symbol: item.symbol,
@@ -130,6 +153,21 @@ export async function deleteWatchlistItem(
   return apiRequest<{ success: boolean }>(
     `/watchlist/items/${itemId}`,
     { method: 'DELETE' },
+    token,
+  );
+}
+
+export async function removeWatchlistItem(
+  token: string,
+  folderId: string,
+  symbol: string,
+): Promise<{ success: boolean }> {
+  return apiRequest<{ success: boolean }>(
+    '/watchlist/items/remove',
+    {
+      method: 'POST',
+      body: JSON.stringify({ folderId, symbol }),
+    },
     token,
   );
 }

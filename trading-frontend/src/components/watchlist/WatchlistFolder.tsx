@@ -1,16 +1,20 @@
-"use client";
-
-import { ChevronDown, ChevronRight, Plus, Search, X } from "lucide-react";
-import { useState, useCallback, useRef } from "react";
+import { Check, ChevronDown, ChevronRight, Plus, Search, X } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from "react";
 
 import { WatchlistItem } from "@/components/watchlist/WatchlistItem";
 import { WatchlistFolderType } from "@/types/watchlist";
 import { cn } from "@/lib/utils";
 import { searchMarket } from "@/lib/api/market";
-import { addWatchlistItem } from "@/lib/api/watchlist";
+import { addWatchlistItem, removeWatchlistItem } from "@/lib/api/watchlist";
 import { useAuth } from "@/components/auth/AuthProvider";
 
-export function WatchlistFolder({ folder }: { folder: WatchlistFolderType }) {
+export function WatchlistFolder({ 
+  folder, 
+  allFolders = [] 
+}: { 
+  folder: WatchlistFolderType;
+  allFolders?: WatchlistFolderType[];
+}) {
   const { token } = useAuth();
   const [open, setOpen] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -23,8 +27,8 @@ export function WatchlistFolder({ folder }: { folder: WatchlistFolderType }) {
     { hint: "NIFTY 50", label: "NSE", route: "/index/nifty", keywords: ["NIFTY"] },
     { hint: "SENSEX", label: "BSE", route: "/index/sensex", keywords: ["SENSEX"] },
     { hint: "RELIANCE", label: "NSE", route: "/stock/reliance", keywords: ["Reliance Industries"] },
-    { hint: "TCS", label: "NSE", route: "/stock/tcs", keywords: ["Tata Consultancy Services"] },
     { hint: "HDFCBANK", label: "NSE", route: "/stock/hdfcbank", keywords: ["HDFC Bank"] },
+    { hint: "TCS", label: "NSE", route: "/stock/tcs", keywords: ["Tata Consultancy Services"] },
   ];
 
   const performSearch = async (query: string) => {
@@ -68,11 +72,32 @@ export function WatchlistFolder({ folder }: { folder: WatchlistFolderType }) {
     }, 300);
   };
 
-  const handleAdd = async (symbol: string) => {
+  const [activeSelector, setActiveSelector] = useState<string | null>(null);
+
+  const isSymbolInFolder = (symbol: string, targetFolderId: string) => {
+    const f = allFolders.find(f => f.id === targetFolderId);
+    return f?.items.some(item => item.symbol === symbol);
+  };
+
+  const handleToggleFolder = async (symbol: string, targetFolderId: string, exchange: string = "NSE") => {
     if (!token) return;
+    const exists = isSymbolInFolder(symbol, targetFolderId);
     try {
-      await addWatchlistItem(token, folder.id, symbol, "NSE");
-      // For immediate feedback in this demo, you could optimistically add to folder.items
+      if (exists) {
+        await removeWatchlistItem(token, targetFolderId, symbol);
+      } else {
+        await addWatchlistItem(token, targetFolderId, symbol, exchange);
+      }
+    } catch (err) {
+      console.error("Toggle failed", err);
+    }
+  };
+
+  const handleAddToThisFolder = async (symbol: string, exchange: string = "NSE") => {
+    if (!token) return;
+    if (isSymbolInFolder(symbol, folder.id)) return;
+    try {
+      await addWatchlistItem(token, folder.id, symbol, exchange);
       setSearchQuery("");
       setResults([]);
     } catch (err) {
@@ -147,23 +172,63 @@ export function WatchlistFolder({ folder }: { folder: WatchlistFolderType }) {
                   <div className="px-4 py-2.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider border-b border-white/5 bg-white/[0.02]">
                     {searchQuery ? "Search Results" : "Popular on Google"}
                   </div>
-                  {results.map((result) => (
-                    <div key={result.route} className="flex items-center gap-4 p-4 hover:bg-white/[0.04] transition-colors border-b border-white/5 last:border-0 group/item">
-                      <button
-                        onClick={() => handleAdd(result.hint)}
-                        className="flex h-7 w-7 items-center justify-center rounded-full text-blue-500 hover:bg-blue-500/20 active:scale-95 transition"
-                      >
-                        <Plus className="h-5 w-5" />
-                      </button>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-[15px] font-semibold text-zinc-100 tracking-tight">{result.hint}</span>
-                          <span className="text-[11px] text-zinc-500 uppercase font-medium">{result.label}</span>
+                  {results.map((result) => {
+                    const inCurrent = isSymbolInFolder(result.hint, folder.id);
+                    const showSelector = activeSelector === result.hint;
+
+                    return (
+                      <div key={result.route} className="relative p-4 hover:bg-white/[0.04] transition-colors border-b border-white/5 last:border-0">
+                        <div className="flex items-center gap-4">
+                          <div className="relative">
+                            <button
+                              onClick={() => setActiveSelector(showSelector ? null : result.hint)}
+                              className={cn(
+                                "flex h-8 w-8 items-center justify-center rounded-full transition-all",
+                                inCurrent 
+                                  ? "text-blue-500 bg-blue-500/10 hover:bg-blue-500/20" 
+                                  : "text-zinc-500 hover:text-blue-500 hover:bg-white/10"
+                              )}
+                            >
+                              {inCurrent ? (
+                                <div className="flex items-center -space-x-0.5">
+                                  <Check className="h-4 w-4 stroke-[3px]" />
+                                  <ChevronDown className="h-3 w-3 opacity-70" />
+                                </div>
+                              ) : (
+                                <Plus className="h-5 w-5" />
+                              )}
+                            </button>
+
+                            {showSelector && (
+                              <div className="absolute top-full left-0 mt-2 w-56 bg-[#1a1c24] border border-white/10 rounded-xl shadow-2xl z-[100] p-1.5 animate-in fade-in zoom-in-95 duration-150">
+                                <div className="px-3 py-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider border-b border-white/5 mb-1.5">
+                                  Add to list
+                                </div>
+                                {allFolders.map(f => (
+                                  <button
+                                    key={f.id}
+                                    onClick={() => handleToggleFolder(result.hint, f.id, result.label)}
+                                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-white/5 transition-colors text-sm text-zinc-300"
+                                  >
+                                    <span className="capitalize">{f.name}</span>
+                                    {isSymbolInFolder(result.hint, f.id) && <Check className="h-4 w-4 text-blue-500" />}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex-1 min-w-0" onClick={() => !inCurrent && handleAddToThisFolder(result.hint, result.label)}>
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-[15px] font-semibold text-zinc-100 tracking-tight">{result.hint}</span>
+                              <span className="text-[11px] text-zinc-500 uppercase font-medium">{result.label}</span>
+                            </div>
+                            <p className="text-xs text-zinc-500 truncate mt-0.5">{result.keywords[0]}</p>
+                          </div>
                         </div>
-                        <p className="text-xs text-zinc-500 truncate mt-0.5">{result.keywords[0]}</p>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -173,8 +238,8 @@ export function WatchlistFolder({ folder }: { folder: WatchlistFolderType }) {
             {folder.items.length === 0 ? (
               !isEditing && <p className="px-4 py-2 text-sm text-zinc-500 italic">This list is empty</p>
             ) : (
-              folder.items.map((item) => (
-                <WatchlistItem key={`${folder.id}-${item.symbol}`} item={item} />
+              folder.items.map((item, index) => (
+                <WatchlistItem key={`${folder.id}-${item.symbol}-${index}`} item={item} />
               ))
             )}
           </div>

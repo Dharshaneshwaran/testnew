@@ -88,8 +88,13 @@ export class YahooMarketProvider implements MarketDataProvider {
 
   async getEquityQuote(symbol: string): Promise<EquityQuote> {
     const normalizedSymbol = symbol.toUpperCase();
+    const yahooSymbol = 
+      EQUITY_SYMBOL_MAP[normalizedSymbol] ?? 
+      INDEX_SYMBOL_MAP[normalizedSymbol] ?? 
+      `${normalizedSymbol}.NS`;
+
     const chart = await this.fetchChart(
-      EQUITY_SYMBOL_MAP[normalizedSymbol] ?? `${normalizedSymbol}.NS`,
+      yahooSymbol,
       '1d',
       '1d',
     );
