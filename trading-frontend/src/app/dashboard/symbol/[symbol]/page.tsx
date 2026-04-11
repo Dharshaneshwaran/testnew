@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { MarketResearch, PricePoint } from "@/types/market";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { addWatchlistItem, getWatchlistFolders, createWatchlistFolder } from "@/lib/api/watchlist";
+import { getResearch, getTimeSeries } from "@/lib/api/market";
 
 const CHART_ACTIONS = [
   { label: "Area", icon: BarChart3 },
@@ -40,6 +41,9 @@ export default function SymbolResearchPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeContentTab, setActiveContentTab] =
     useState<(typeof CONTENT_TABS)[number]>("Overview");
+  const [activeRange, setActiveRange] = useState<(typeof RANGE_TABS)[number]>("1D");
+  const [hoveredPrice, setHoveredPrice] = useState<number | null>(null);
+  const [hoveredTime, setHoveredTime] = useState<string | null>(null);
 
   const { token } = useAuth();
   const [addingToList, setAddingToList] = useState(false);
@@ -84,11 +88,14 @@ export default function SymbolResearchPage() {
     async function load() {
       try {
         const [researchResponse, chartResponse] = await Promise.all([
-          getResearch(symbol).catch((err) => {
+          getResearch(symbol).catch((err: any) => {
             console.warn(err);
             return null;
           }),
-          getTimeSeries("equity", symbol, { range: "1d", interval: "30m" }).catch((err) => {
+          getTimeSeries("equity", symbol, {
+            range: activeRange.toLowerCase(),
+            interval: getRangeInterval(activeRange),
+          }).catch((err: any) => {
             console.warn(err);
             return [];
           }),
@@ -121,7 +128,7 @@ export default function SymbolResearchPage() {
     return () => {
       active = false;
     };
-  }, [symbol]);
+  }, [symbol, activeRange]);
 
   const isPositive = (research?.change ?? 0) >= 0;
   const headline = useMemo(() => {
@@ -136,8 +143,8 @@ export default function SymbolResearchPage() {
   return (
     <main className="min-h-screen bg-[#0b0d12] text-white">
       <Header title="Research" subtitle="Market research" />
-      <div className="grid min-h-[calc(100vh-85px)] grid-cols-1 lg:grid-cols-[minmax(700px,1fr)_630px]">
-        <section className="border-r border-white/8 px-7 py-5">
+      <div className="flex flex-col min-h-[calc(100vh-85px)]">
+        <section className="px-4 py-5 lg:px-7">
           <div className="flex flex-wrap items-center gap-3 text-[15px] text-white/68">
             <Link href="/dashboard" className="inline-flex items-center gap-2 text-white/88">
               <ArrowLeft className="h-4 w-4" />
@@ -153,7 +160,12 @@ export default function SymbolResearchPage() {
                 {research?.name ?? symbol}
               </h1>
               <div className="mt-3 flex flex-wrap items-center gap-3">
-                <p className="text-[22px] font-medium text-white">{formatCurrency(research?.price)}</p>
+                <p className="text-[22px] font-medium text-white transition-all">
+                  {hoveredPrice !== null ? formatCurrency(hoveredPrice) : formatCurrency(research?.price)}
+                </p>
+                {hoveredPrice !== null ? (
+                  <p className="text-[14px] text-white/54">{hoveredTime}</p>
+                ) : (
                 <p
                   className={cn(
                     "text-[20px] font-medium",
@@ -164,6 +176,7 @@ export default function SymbolResearchPage() {
                   {" "}
                   ({formatSignedCurrency(research?.change)}) Today
                 </p>
+                )}
               </div>
               <p className="mt-2 text-[14px] text-white/54">
                 {lastUpdatedLabel} <span className="px-2 text-white/24">•</span> INR
@@ -216,7 +229,13 @@ export default function SymbolResearchPage() {
                 </div>
               ) : (
                 <>
-                  <TradingChart data={chartData} />
+                  <TradingChart
+                    data={chartData}
+                    onHoverPrice={(price, time) => {
+                      setHoveredPrice(price);
+                      setHoveredTime(time);
+                    }}
+                  />
                   <div className="pointer-events-none absolute right-8 bottom-[86px] text-right text-[13px] text-white/74">
                     <div>Prev. close {formatCurrency(research?.previousClose)}</div>
                   </div>
@@ -225,13 +244,14 @@ export default function SymbolResearchPage() {
             </div>
 
             <div className="flex flex-wrap gap-3 px-5 py-3">
-              {RANGE_TABS.map((tab, index) => (
+              {RANGE_TABS.map((tab) => (
                 <button
                   key={tab}
                   type="button"
+                  onClick={() => setActiveRange(tab)}
                   className={cn(
                     "rounded-xl px-3 py-1.5 text-[14px] text-white/62 transition",
-                    index === 0 && "bg-white/[0.08] text-white",
+                    activeRange === tab && "bg-white/[0.08] text-white",
                   )}
                 >
                   {tab}
@@ -338,71 +358,23 @@ export default function SymbolResearchPage() {
           {error && <p className="pt-4 text-sm text-red-400">{error}</p>}
         </section>
 
-        <aside className="px-7 py-5">
-          <div className="flex items-center justify-between">
-            <h2 className="text-[23px] font-medium tracking-[-0.03em] text-white">Research</h2>
-            <div className="flex items-center gap-5 text-white/75">
-              <button type="button" aria-label="Edit">
-                <Pencil className="h-5 w-5" />
-              </button>
-              <button type="button" aria-label="Refresh">
-                <TrendingUp className="h-5 w-5" />
-              </button>
-              <button type="button" aria-label="Expand">
-                <ScanSearch className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-4 h-px bg-white/10" />
-
-          <div className="mt-10 flex justify-end">
-            <div className="rounded-full bg-white/[0.05] px-6 py-4 text-[15px] text-white/88">
-              About {headline}
-            </div>
-          </div>
-
-          <div className="mt-8 flex items-center gap-3">
-            {RESEARCH_SITES.map((site, index) => (
-              <div
-                key={site}
-                className={cn(
-                  "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white",
-                  index === 0 && "bg-[#af74ff]",
-                  index === 1 && "bg-[#f38a36]",
-                  index === 2 && "bg-[#4a81ff]",
-                )}
-              >
-                {site.slice(0, 1)}
-              </div>
-            ))}
-            <span className="text-[14px] text-white/82">13 sites</span>
-          </div>
-
-          <p className="mt-10 max-w-[540px] text-[16px] leading-10 text-white/86">
-            {research?.summary ??
-              "Research context is loading for this company."}
-          </p>
-
-          <h3 className="mt-4 text-[18px] font-semibold text-white">
-            {research?.stance ?? "Bullish"}
-          </h3>
-
-          <ul className="mt-4 space-y-6 text-[16px] leading-10 text-white/86">
-            {(research?.bullishPoints ?? []).map((point) => (
-              <li key={point.title} className="flex gap-4">
-                <span className="pt-4 text-white">•</span>
-                <p>
-                  <span className="font-medium text-white">{point.title}: </span>
-                  {point.detail}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </aside>
       </div>
     </main>
   );
+}
+
+function getRangeInterval(range: (typeof RANGE_TABS)[number]): string {
+  switch (range) {
+    case "1D": return "1m";
+    case "5D": return "5m";
+    case "1M": return "30m";
+    case "6M": return "1d";
+    case "YTD": return "1d";
+    case "1Y": return "1d";
+    case "5Y": return "1wk";
+    case "MAX": return "1mo";
+    default:   return "5m";
+  }
 }
 
 function StatsColumn({ items }: { items: [string, string][] }) {

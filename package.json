@@ -1,0 +1,11 @@
+{
+  "name": "testnew-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "cd trading-frontend && npm run dev",
+    "dev:frontend": "cd trading-frontend && npm run dev",
+    "dev:backend": "cd backend && npm run start:dev",
+    "install:all": "npm install --prefix trading-frontend && npm install --prefix backend"
+  }
+}
