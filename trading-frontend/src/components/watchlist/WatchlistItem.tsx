@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { useDashboard } from "@/context/DashboardContext";
+import { StockMoveAlertButton } from "@/components/watchlist/StockMoveAlertButton";
 
 export function WatchlistItem({ item, onRemove }: { item: WatchlistItemType; onRemove?: (itemId: string) => void | Promise<void> }) {
   const isUp = item.change >= 0;
@@ -102,6 +103,10 @@ export function WatchlistItem({ item, onRemove }: { item: WatchlistItemType; onR
           <ChevronRight className="h-4 w-4 text-zinc-500 group-hover:text-zinc-400 transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100" />
         </div>
       </Link>
+
+      <div className="flex-shrink-0">
+        <StockMoveAlertButton symbol={item.symbol} className="opacity-70 hover:opacity-100" />
+      </div>
       
       {onRemove && (
         <button

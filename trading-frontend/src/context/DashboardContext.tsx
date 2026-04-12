@@ -12,6 +12,10 @@ interface DashboardContextType {
   sidebarStocks: string[];
   addSidebarStock: (symbol: string) => void;
   removeSidebarStock: (symbol: string) => void;
+  sidebarCollapsed: boolean;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  marketBarVisible: boolean;
+  setMarketBarVisible: (visible: boolean) => void;
 }
 
 const DEFAULT_SIDEBAR_STOCKS = [
@@ -28,21 +32,54 @@ const DEFAULT_SIDEBAR_STOCKS = [
 const DashboardContext = createContext<DashboardContextType | undefined>(undefined);
 
 export function DashboardProvider({ children }: { children: React.ReactNode }) {
-  const [mode, setMode] = useState<DashboardMode>("beta");
-  const [dashboardStocks, setDashboardStocks] = useState<(string | null)[]>([null, null, null, null]);
-  const [sidebarStocks, setSidebarStocks] = useState<string[]>(DEFAULT_SIDEBAR_STOCKS);
-
-  // Initialize from localStorage if available
-  useEffect(() => {
-    const savedMode = localStorage.getItem("dashboard_mode") as DashboardMode;
-    if (savedMode) setMode(savedMode);
-
-    const savedStocks = localStorage.getItem("dashboard_stocks");
-    if (savedStocks) setDashboardStocks(JSON.parse(savedStocks));
-
-    const savedSidebar = localStorage.getItem("sidebar_stocks");
-    if (savedSidebar) setSidebarStocks(JSON.parse(savedSidebar));
-  }, []);
+  const [mode, setMode] = useState<DashboardMode>(() => {
+    if (typeof window === "undefined") {
+      return "beta";
+    }
+    const savedMode = window.localStorage.getItem("dashboard_mode") as DashboardMode | null;
+    return savedMode ?? "beta";
+  });
+  const [dashboardStocks, setDashboardStocks] = useState<(string | null)[]>(() => {
+    if (typeof window === "undefined") {
+      return [null, null, null, null];
+    }
+    const savedStocks = window.localStorage.getItem("dashboard_stocks");
+    if (!savedStocks) {
+      return [null, null, null, null];
+    }
+    try {
+      return JSON.parse(savedStocks) as (string | null)[];
+    } catch {
+      return [null, null, null, null];
+    }
+  });
+  const [sidebarStocks, setSidebarStocks] = useState<string[]>(() => {
+    if (typeof window === "undefined") {
+      return DEFAULT_SIDEBAR_STOCKS;
+    }
+    const savedSidebar = window.localStorage.getItem("sidebar_stocks");
+    if (!savedSidebar) {
+      return DEFAULT_SIDEBAR_STOCKS;
+    }
+    try {
+      return JSON.parse(savedSidebar) as string[];
+    } catch {
+      return DEFAULT_SIDEBAR_STOCKS;
+    }
+  });
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    return window.localStorage.getItem("sidebar_collapsed") === "1";
+  });
+  const [marketBarVisible, setMarketBarVisible] = useState<boolean>(() => {
+    if (typeof window === "undefined") {
+      return true;
+    }
+    const value = window.localStorage.getItem("market_bar_visible");
+    return value !== "0";
+  });
 
   // Persist changes
   useEffect(() => {
@@ -56,6 +93,14 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     localStorage.setItem("sidebar_stocks", JSON.stringify(sidebarStocks));
   }, [sidebarStocks]);
+
+  useEffect(() => {
+    localStorage.setItem("sidebar_collapsed", sidebarCollapsed ? "1" : "0");
+  }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    localStorage.setItem("market_bar_visible", marketBarVisible ? "1" : "0");
+  }, [marketBarVisible]);
 
   const setSlot = (index: number, symbol: string | null) => {
     setDashboardStocks((prev) => {
@@ -88,6 +133,10 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         sidebarStocks,
         addSidebarStock,
         removeSidebarStock,
+        sidebarCollapsed,
+        setSidebarCollapsed,
+        marketBarVisible,
+        setMarketBarVisible,
       }}
     >
       {children}

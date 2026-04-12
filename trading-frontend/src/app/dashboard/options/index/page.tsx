@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { Header } from "@/components/layout/Header";
 import { ExpiryDropdown } from "@/components/options/ExpiryDropdown";
+import { OptionChainChart } from "@/components/options/OptionChainChart";
 import { OptionChainTable } from "@/components/options/OptionChainTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getExpiries, getOptionChain } from "@/lib/api/options";
@@ -75,7 +76,10 @@ export default function IndexOptionsPage() {
             ) : rows.length === 0 ? (
               <p className="text-sm text-zinc-500">No option chain data available for this expiry.</p>
             ) : (
-              <OptionChainTable rows={rows} />
+              <div className="space-y-4">
+                <OptionChainChart rows={rows} />
+                <OptionChainTable rows={rows} />
+              </div>
             )}
           </CardContent>
         </Card>

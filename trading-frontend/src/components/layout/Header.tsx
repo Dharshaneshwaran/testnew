@@ -2,10 +2,13 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
+  BarChart3,
   Check,
   ChevronDown,
   Menu,
+  MessageSquare,
   Search,
+  X,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTransition } from "react";
@@ -31,7 +34,7 @@ export function Header({ title, subtitle }: { title: string; subtitle: string })
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
-  const { mode, setMode } = useDashboard();
+  const { mode, setMode, marketBarVisible, setMarketBarVisible } = useDashboard();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchError, setSearchError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<MarketSearchItem[]>([]);
@@ -125,15 +128,50 @@ export function Header({ title, subtitle }: { title: string; subtitle: string })
             </button>
           </div>
 
-          <div className="hidden min-w-0 flex-1 items-center gap-3 overflow-x-auto no-scrollbar py-1 xl:flex">
-            {tickers.map((ticker) => (
-              <div key={ticker.symbol} className="flex-shrink-0">
-                <MarketChip ticker={ticker} />
+          {marketBarVisible ? (
+            <div className="hidden min-w-0 flex-1 items-center gap-3 overflow-hidden py-1 xl:flex">
+              <div className="min-w-0 flex-1 flex-wrap items-center gap-3 overflow-hidden xl:flex">
+                {tickers.map((ticker) => (
+                  <div key={ticker.symbol} className="flex-shrink-0">
+                    <MarketChip ticker={ticker} />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+              <button
+                type="button"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.04] text-white/70 transition hover:bg-white/[0.08] hover:text-white"
+                onClick={() => setMarketBarVisible(false)}
+                aria-label="Hide market bar"
+                title="Hide market bar"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="hidden h-9 items-center gap-2 rounded-full bg-white/[0.06] px-4 text-sm text-white/85 transition hover:bg-white/[0.09] xl:inline-flex"
+              onClick={() => setMarketBarVisible(true)}
+              aria-label="Show market bar"
+              title="Show market bar"
+            >
+              <BarChart3 className="h-4 w-4 text-white/70" />
+              Markets
+            </button>
+          )}
 
           <div className="ml-auto flex items-center gap-3">
+            <button
+              type="button"
+              className="hidden h-10 items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 text-sm text-white/80 transition hover:bg-white/[0.06] lg:inline-flex"
+              onClick={() => router.push("/dashboard/chat")}
+              aria-label="Open chat"
+              title="Chat"
+            >
+              <MessageSquare className="h-4 w-4 text-white/70" />
+              Chat
+            </button>
+
             <form className="relative flex-1 md:flex-none md:block" onSubmit={handleSearch}>
               <label className="flex h-10 w-[220px] items-center rounded-full border border-white/8 bg-white/[0.03] pl-4 pr-3 text-sm text-white/80 transition focus-within:border-white/18">
                 <Search className="h-4 w-4 text-white/55" />

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Header } from "@/components/layout/Header";
-import { WatchlistFolder } from "@/components/watchlist/WatchlistFolder";
+import { WatchlistTable } from "@/components/watchlist/WatchlistTable";
 import { getWatchlistFolders } from "@/lib/api/watchlist";
 import { WatchlistFolderType } from "@/types/watchlist";
 
@@ -39,10 +39,7 @@ export default function WatchlistPage() {
       <div className="space-y-3 px-4 py-4 lg:px-6">
         {error && <p className="text-sm text-red-400">{error}</p>}
         {loading && <p className="text-sm text-zinc-500">Loading watchlist...</p>}
-
-        {folders.map((folder) => (
-          <WatchlistFolder key={folder.id} folder={folder} />
-        ))}
+        {!loading && <WatchlistTable folders={folders} />}
       </div>
     </main>
   );

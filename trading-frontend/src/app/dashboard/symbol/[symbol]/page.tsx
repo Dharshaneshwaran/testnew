@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   BarChart3,
@@ -14,19 +14,14 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-import { TradingChart } from "@/components/charts/TradingChart";
+import { TradingChart, type TradingChartVariant } from "@/components/charts/TradingChart";
 import { Header } from "@/components/layout/Header";
 import { cn } from "@/lib/utils";
 import { MarketResearch, PricePoint } from "@/types/market";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { addWatchlistItem, getWatchlistFolders, createWatchlistFolder } from "@/lib/api/watchlist";
 import { getResearch, getTimeSeries } from "@/lib/api/market";
-
-const CHART_ACTIONS = [
-  { label: "Area", icon: BarChart3 },
-  { label: "Compare", icon: TrendingUp },
-  { label: "Indicators", icon: ScanSearch },
-] as const;
+import { StockMoveAlertButton } from "@/components/watchlist/StockMoveAlertButton";
 
 const RANGE_TABS = ["1D", "5D", "1M", "6M", "YTD", "1Y", "5Y", "MAX"] as const;
 const CONTENT_TABS = ["Overview", "Earnings", "Financials"] as const;
@@ -44,10 +39,29 @@ export default function SymbolResearchPage() {
   const [activeRange, setActiveRange] = useState<(typeof RANGE_TABS)[number]>("1D");
   const [hoveredPrice, setHoveredPrice] = useState<number | null>(null);
   const [hoveredTime, setHoveredTime] = useState<string | null>(null);
+  const [chartVariant, setChartVariant] = useState<TradingChartVariant>("area");
+  const [chartTypeMenuOpen, setChartTypeMenuOpen] = useState(false);
+  const chartTypeRef = useRef<HTMLDivElement | null>(null);
 
   const { token } = useAuth();
   const [addingToList, setAddingToList] = useState(false);
   const [added, setAdded] = useState(false);
+
+  useEffect(() => {
+    if (!chartTypeMenuOpen) {
+      return;
+    }
+
+    const handler = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (target && chartTypeRef.current && !chartTypeRef.current.contains(target)) {
+        setChartTypeMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [chartTypeMenuOpen]);
 
   const handleAddToList = async () => {
     if (!token) {
@@ -183,38 +197,88 @@ export default function SymbolResearchPage() {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={handleAddToList}
-              disabled={addingToList || added}
-              className={cn(
-                "inline-flex h-11 items-center gap-3 rounded-full px-6 text-[16px] font-medium transition",
-                added ? "bg-emerald-500/20 text-emerald-400" : "bg-[#2a3142] text-white hover:bg-[#31394d]"
-              )}
-            >
-              <Plus className="h-5 w-5" />
-              {addingToList ? "Adding..." : added ? "Added" : "Add to list"}
-              <ChevronDown className="h-4 w-4 opacity-70" />
-            </button>
+            <div className="flex items-center gap-3">
+              <StockMoveAlertButton symbol={symbol} className="h-11 w-11" />
+              <button
+                type="button"
+                onClick={handleAddToList}
+                disabled={addingToList || added}
+                className={cn(
+                  "inline-flex h-11 items-center gap-3 rounded-full px-6 text-[16px] font-medium transition",
+                  added ? "bg-emerald-500/20 text-emerald-400" : "bg-[#2a3142] text-white hover:bg-[#31394d]"
+                )}
+              >
+                <Plus className="h-5 w-5" />
+                {addingToList ? "Adding..." : added ? "Added" : "Add to list"}
+                <ChevronDown className="h-4 w-4 opacity-70" />
+              </button>
+            </div>
           </div>
 
           <div className="mt-6 overflow-hidden rounded-[22px] border border-white/5 bg-[#14171f]">
             <div className="flex flex-wrap gap-1 border-b border-white/7 px-4 py-3">
-              {CHART_ACTIONS.map((action) => {
-                const Icon = action.icon;
-                return (
-                  <button
-                    key={action.label}
-                    type="button"
-                    onClick={() => alert(`${action.label} feature coming soon`)}
-                    className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-[15px] text-white/86 transition hover:bg-white/[0.04]"
-                  >
-                    <Icon className="h-4 w-4" />
-                    {action.label}
-                    <ChevronDown className="h-4 w-4 text-white/60" />
-                  </button>
-                );
-              })}
+              <div ref={chartTypeRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setChartTypeMenuOpen((prev) => !prev)}
+                  className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-[15px] text-white/86 transition hover:bg-white/[0.04]"
+                  aria-label="Chart type"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  {chartVariant === "area" ? "Area" : chartVariant === "candles" ? "Candles" : "Line"}
+                  <ChevronDown className="h-4 w-4 text-white/60" />
+                </button>
+
+                {chartTypeMenuOpen && (
+                  <div className="absolute left-0 top-full z-50 mt-2 w-44 overflow-hidden rounded-2xl border border-white/10 bg-[#13151d] shadow-2xl">
+                    {[
+                      { value: "area" as const, label: "Area" },
+                      { value: "candles" as const, label: "Candles" },
+                      { value: "line" as const, label: "Line" },
+                    ].map((item) => (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => {
+                          setChartVariant(item.value);
+                          setChartTypeMenuOpen(false);
+                        }}
+                        className={cn(
+                          "flex w-full items-center justify-between px-4 py-3 text-left text-sm transition hover:bg-white/[0.04]",
+                          chartVariant === item.value ? "text-emerald-200" : "text-zinc-200",
+                        )}
+                      >
+                        <span className="font-medium">{item.label}</span>
+                        {chartVariant === item.value && <span className="text-xs text-emerald-200">Selected</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="button"
+                disabled
+                className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-[15px] text-white/40"
+                aria-label="Compare (coming soon)"
+                title="Coming soon"
+              >
+                <TrendingUp className="h-4 w-4" />
+                Compare
+                <ChevronDown className="h-4 w-4 text-white/30" />
+              </button>
+
+              <button
+                type="button"
+                disabled
+                className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-[15px] text-white/40"
+                aria-label="Indicators (coming soon)"
+                title="Coming soon"
+              >
+                <ScanSearch className="h-4 w-4" />
+                Indicators
+                <ChevronDown className="h-4 w-4 text-white/30" />
+              </button>
             </div>
 
             <div className="relative px-3 py-2">
@@ -231,6 +295,7 @@ export default function SymbolResearchPage() {
                 <>
                   <TradingChart
                     data={chartData}
+                    variant={chartVariant}
                     onHoverPrice={(price, time) => {
                       setHoveredPrice(price);
                       setHoveredTime(time);

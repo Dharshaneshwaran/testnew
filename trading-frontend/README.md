@@ -20,6 +20,14 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Sudden Move Alerts
+
+The dashboard supports a simple "push-like" alert for sudden stock moves (browser notifications + in-app toast).
+
+- Open any watchlist row (bell icon) or a symbol page and enable the alert.
+- Choose a % threshold and direction (up/down/both).
+- While the dashboard is open, the app polls quotes every ~30 seconds and notifies when the move exceeds your threshold.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

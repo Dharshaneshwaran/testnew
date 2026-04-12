@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ChevronDown, ChevronUp, Expand, ListPlus, Plus } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Expand, ListPlus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WatchlistFolder } from "@/components/watchlist/WatchlistFolder";
 
@@ -24,13 +23,14 @@ type LiveSectorRow = {
 
 export function Sidebar() {
   const { token } = useAuth();
-  const { mode } = useDashboard();
+  const { mode, sidebarCollapsed, setSidebarCollapsed } = useDashboard();
   const [watchlistFolders, setWatchlistFolders] = useState<WatchlistFolderType[]>([]);
   const [sectorRows, setSectorRows] = useState<LiveSectorRow[]>([]);
   const [isAddingFolder, setIsAddingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [sectorsLoaded, setSectorsLoaded] = useState(false);
+  const [watchlistOpen, setWatchlistOpen] = useState(true);
+  const [sectorsOpen, setSectorsOpen] = useState(true);
 
   const refreshWatchlists = async () => {
     if (!token) return;
@@ -121,14 +121,11 @@ export function Sidebar() {
 
         if (active) {
           setSectorRows(nextRows.filter((row): row is LiveSectorRow => row !== null));
-          setSectorsLoaded(true);
         }
       } catch {
         if (active) {
           setSectorRows([]);
         }
-      } finally {
-        if (active) setSectorsLoaded(true);
       }
     }
 
@@ -148,13 +145,20 @@ export function Sidebar() {
         />
       )}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 w-[300px] sm:w-[360px] shrink-0 border-r border-white/8 bg-[#0d0f14] px-6 py-8 overflow-y-auto transition-transform duration-300 lg:static lg:block lg:translate-x-0",
+        "fixed inset-y-0 left-0 z-50 shrink-0 border-r border-white/8 bg-[#0d0f14] py-8 overflow-y-auto overflow-x-hidden transition-all duration-300 lg:static lg:block lg:translate-x-0",
+        sidebarCollapsed ? "w-[76px] px-3" : "w-[300px] px-6 sm:w-[360px]",
         mobileOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="mb-12 flex items-center justify-between">
-          <h1 className="text-[24px] font-semibold tracking-[-0.04em] text-white">
-            Ruroxz <span className="font-normal text-white/70">Finance</span>
-          </h1>
+          {!sidebarCollapsed ? (
+            <h1 className="text-[24px] font-semibold tracking-[-0.04em] text-white">
+              Ruroxz <span className="font-normal text-white/70">Finance</span>
+            </h1>
+          ) : (
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/5 text-sm font-semibold text-white/70">
+              RF
+            </div>
+          )}
           <button 
             type="button" 
             className="lg:hidden text-white/70"
@@ -164,59 +168,19 @@ export function Sidebar() {
           </button>
         </div>
 
-        {mode === "classic" ? (
-          <section className="space-y-6 pt-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1 group cursor-pointer">
-                <h2 className="text-[21px] font-medium tracking-[-0.03em] text-white group-hover:text-white/90">Watchlist</h2>
-                <ChevronDown className="h-4 w-4 text-white/50 group-hover:text-white/70" />
-              </div>
-              <button
-                type="button"
-                aria-label="Add"
-                className="hover:text-white transition-colors"
-                onClick={() => setIsAddingFolder((prev) => !prev)}
-              >
-                <Plus className="h-5 w-5 text-white/72" />
-              </button>
-            </div>
+        <div className="hidden lg:flex justify-end mb-6">
+          <button
+            type="button"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/70 transition hover:bg-white/10 hover:text-white"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </button>
+        </div>
 
-            {isAddingFolder && (
-              <form onSubmit={handleCreateFolder} className="px-2">
-                <div className="relative flex items-center bg-zinc-800/40 rounded-xl border border-white/10 px-3 py-2.5 focus-within:border-blue-500/50 transition-colors">
-                  <Plus className="h-4 w-4 text-zinc-500 mr-2" />
-                  <input
-                    type="text"
-                    placeholder="List name"
-                    value={newFolderName}
-                    onChange={(e) => setNewFolderName(e.target.value)}
-                    className="bg-transparent border-none outline-none text-sm text-zinc-100 w-full placeholder:text-zinc-500"
-                    autoFocus
-                  />
-                  {newFolderName && (
-                    <button type="submit" className="text-xs font-semibold text-blue-500 hover:text-blue-400">
-                      Create
-                    </button>
-                  )}
-                </div>
-              </form>
-            )}
-
-            <div className="space-y-1">
-              {watchlistFolders.length === 0 ? (
-                <p className="px-4 py-2 text-[15px] text-white/50 italic">No watchlists. Create one to get started!</p>
-              ) : (
-                watchlistFolders.map((folder) => (
-                  <WatchlistFolder key={folder.id} folder={folder} allFolders={watchlistFolders} />
-                ))
-              )}
-            </div>
-
-            <p className="px-3 text-[11px] text-white/30 uppercase tracking-widest font-semibold pt-4">
-              Hold & Drag to Dashboard
-            </p>
-          </section>
-        ) : (
+        {sidebarCollapsed ? null : (
           <>
             <div className="flex items-center justify-between">
               <div className="relative group">
@@ -252,7 +216,12 @@ export function Sidebar() {
                 >
                   <ListPlus className="h-5 w-5" />
                 </button>
-                <button type="button" aria-label="Expand" className="hover:text-white transition-colors">
+                <button
+                  type="button"
+                  aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                  className="hover:text-white transition-colors"
+                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                >
                   <Expand className="h-4 w-4" />
                 </button>
               </div>
@@ -284,62 +253,72 @@ export function Sidebar() {
             <section className="pt-7">
               <div className="flex items-center justify-between px-2 mb-2">
                 <h3 className="text-[17px] font-medium text-white">Watchlist</h3>
-                <div className="flex items-center gap-4 text-white/72">
-                  <button
-                    type="button"
-                    aria-label="Add to watchlist"
-                    className="hover:text-white transition-colors"
-                    onClick={() => setIsAddingFolder(true)}
-                  >
-                    <Plus className="h-5 w-5" />
-                  </button>
-                  <button type="button" aria-label="Collapse watchlist" className="hover:text-white transition-colors">
-                    <ChevronUp className="h-4 w-4" />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  aria-label={watchlistOpen ? "Collapse watchlist" : "Expand watchlist"}
+                  className="text-white/72 hover:text-white transition-colors"
+                  onClick={() => setWatchlistOpen((prev) => !prev)}
+                >
+                  <ChevronUp className={cn("h-4 w-4 transition-transform", !watchlistOpen && "rotate-180")} />
+                </button>
               </div>
 
-              <div className="space-y-1">
-                {watchlistFolders.length === 0 ? (
-                  <p className="px-4 py-2 text-[15px] text-white/50 italic">This list is empty</p>
-                ) : (
-                  watchlistFolders.map((folder) => (
-                    <WatchlistFolder key={folder.id} folder={folder} allFolders={watchlistFolders} />
-                  ))
-                )}
-              </div>
+              {watchlistOpen && (
+                <div className="space-y-1">
+                  {watchlistFolders.length === 0 ? (
+                    <p className="px-4 py-2 text-[15px] text-white/50 italic">No lists yet</p>
+                  ) : (
+                    watchlistFolders.map((folder) => (
+                      <WatchlistFolder key={folder.id} folder={folder} allFolders={watchlistFolders} />
+                    ))
+                  )}
+                </div>
+              )}
+
+              {mode === "classic" && (
+                <p className="px-3 pt-4 text-[11px] font-semibold uppercase tracking-widest text-white/30">
+                  Hold & Drag to Dashboard
+                </p>
+              )}
             </section>
 
             <section className="pt-10">
               <div className="flex items-center justify-between">
                 <h3 className="text-[17px] font-medium text-white">Equity sectors</h3>
-                <button type="button" aria-label="Collapse equity sectors" className="text-white/72">
-                  <ChevronUp className="h-4 w-4" />
+                <button
+                  type="button"
+                  aria-label={sectorsOpen ? "Collapse equity sectors" : "Expand equity sectors"}
+                  className="text-white/72 hover:text-white transition-colors"
+                  onClick={() => setSectorsOpen((prev) => !prev)}
+                >
+                  <ChevronUp className={cn("h-4 w-4 transition-transform", !sectorsOpen && "rotate-180")} />
                 </button>
               </div>
 
-              <div className="mt-4 divide-y divide-white/8">
-                {sectorRows.map((sector) => (
-                  <div key={sector.symbol} className="grid grid-cols-[1fr_92px_auto] items-center gap-4 py-3.5">
-                    <div className="min-w-0">
-                      <p className="truncate text-[15px] font-medium tracking-[0.01em] text-white">
-                        {sector.symbol}
-                      </p>
-                      <p className="mt-1 text-sm text-white/52">{sector.label}</p>
+              {sectorsOpen && (
+                <div className="mt-4 divide-y divide-white/8">
+                  {sectorRows.map((sector) => (
+                    <div key={sector.symbol} className="grid grid-cols-[1fr_92px_auto] items-center gap-4 py-3.5">
+                      <div className="min-w-0">
+                        <p className="truncate text-[15px] font-medium tracking-[0.01em] text-white">
+                          {sector.symbol}
+                        </p>
+                        <p className="mt-1 text-sm text-white/52">{sector.label}</p>
+                      </div>
+                      <div className="h-9">
+                        <MiniSparkline points={sector.sparkline} trend={sector.changePercent >= 0 ? "up" : "down"} />
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[15px] font-medium text-white">{formatPrice(sector.price)}</p>
+                        <p className={sector.changePercent >= 0 ? "mt-1 text-sm text-[#8ee78f]" : "mt-1 text-sm text-[#f28b82]"}>
+                          {sector.changePercent >= 0 ? "+" : ""}
+                          {sector.changePercent.toFixed(2)}%
+                        </p>
+                      </div>
                     </div>
-                    <div className="h-9">
-                      <MiniSparkline points={sector.sparkline} trend={sector.changePercent >= 0 ? "up" : "down"} />
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[15px] font-medium text-white">{formatPrice(sector.price)}</p>
-                      <p className={sector.changePercent >= 0 ? "mt-1 text-sm text-[#8ee78f]" : "mt-1 text-sm text-[#f28b82]"}>
-                        {sector.changePercent >= 0 ? "+" : ""}
-                        {sector.changePercent.toFixed(2)}%
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </section>
           </>
         )}

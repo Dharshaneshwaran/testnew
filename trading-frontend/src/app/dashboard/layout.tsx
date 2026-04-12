@@ -5,6 +5,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { DashboardProvider, useDashboard } from "@/context/DashboardContext";
 import { DndContext, DragEndEvent } from "@dnd-kit/core";
+import { StockMoveAlertMonitor } from "@/components/alerts/StockMoveAlertMonitor";
 
 function LayoutContent({ children }: { children: ReactNode }) {
   const { mode, setSlot } = useDashboard();
@@ -25,7 +26,10 @@ function LayoutContent({ children }: { children: ReactNode }) {
     <DndContext onDragEnd={handleDragEnd}>
       <div className="min-h-screen bg-transparent lg:flex">
         <Sidebar />
-        <div className="min-w-0 flex-1">{children}</div>
+        <div className="min-w-0 flex-1">
+          <StockMoveAlertMonitor />
+          {children}
+        </div>
       </div>
     </DndContext>
   );
