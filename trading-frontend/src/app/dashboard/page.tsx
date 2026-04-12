@@ -78,7 +78,15 @@ export default function DashboardPage() {
   const [tickers, setTickers] = useState<Ticker[]>([]);
   const [sparklineMap, setSparklineMap] = useState<Record<string, PricePoint[]>>({});
   const [chartPoints, setChartPoints] = useState<PricePoint[]>([]);
-  const [selectedStock, setSelectedStock] = useState<any>(null);
+  const [selectedStock, setSelectedStock] = useState<{
+    symbol: string;
+    name: string;
+    price: number;
+    change: number;
+    changePercent: number;
+    volume: number;
+    dayRange: string;
+  } | null>(null);
   const [topGainers, setTopGainers] = useState<GainerLoserItem[]>([]);
   const [topLosers, setTopLosers] = useState<GainerLoserItem[]>([]);
   const [sectors, setSectors] = useState<SectorCard[]>([]);
@@ -91,7 +99,7 @@ export default function DashboardPage() {
     if (mode === "classic") return;
 
     let active = true;
-    let intervalId: any = null;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
 
     async function load(showInitialLoading = false) {
       if (showInitialLoading) setLoading(true);
@@ -143,7 +151,9 @@ export default function DashboardPage() {
     intervalId = setInterval(load, REFRESH_RATE);
     return () => {
       active = false;
-      clearInterval(intervalId);
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
     };
   }, [mode, token, REFRESH_RATE]);
 

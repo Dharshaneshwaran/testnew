@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { WatchlistItem } from "@/components/watchlist/WatchlistItem";
 import { WatchlistFolderType } from "@/types/watchlist";
 import { cn } from "@/lib/utils";
-import { searchMarket } from "@/lib/api/market";
+import { searchMarket, type MarketSearchItem } from "@/lib/api/market";
 import { addWatchlistItem, deleteWatchlistFolder, deleteWatchlistItem, removeWatchlistItem } from "@/lib/api/watchlist";
 import { useAuth } from "@/components/auth/AuthProvider";
 
@@ -19,7 +19,7 @@ export function WatchlistFolder({
   const [open, setOpen] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<MarketSearchItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -76,7 +76,7 @@ export function WatchlistFolder({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const normalizeSymbol = (hint: string, resultSymbol?: string) => {
-    let symbol = resultSymbol || hint;
+    const symbol = resultSymbol || hint;
     const symbolMap: Record<string, string> = {
       "NIFTY 50": "NIFTY",
       "BSE SENSEX": "SENSEX",

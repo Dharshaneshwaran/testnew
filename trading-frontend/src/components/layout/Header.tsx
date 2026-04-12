@@ -68,18 +68,23 @@ export function Header({ title, subtitle }: { title: string; subtitle: string })
   }, []);
 
   useEffect(() => {
-    if (!normalizedQuery) {
-      setSuggestions([]);
-      return;
-    }
+    if (!normalizedQuery) return;
 
+    let active = true;
     const timeoutId = setTimeout(() => {
       void searchMarket(normalizedQuery)
-        .then((items) => setSuggestions(items))
-        .catch(() => setSuggestions([]));
+        .then((items) => {
+          if (active) setSuggestions(items);
+        })
+        .catch(() => {
+          if (active) setSuggestions([]);
+        });
     }, 150);
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      active = false;
+      clearTimeout(timeoutId);
+    };
   }, [normalizedQuery]);
 
   const userInitials = useMemo(() => {
@@ -177,7 +182,14 @@ export function Header({ title, subtitle }: { title: string; subtitle: string })
                 <Search className="h-4 w-4 text-white/55" />
                 <input
                   value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setSearchQuery(value);
+                    if (!value.trim()) {
+                      setSearchError(null);
+                      setSuggestions([]);
+                    }
+                  }}
                   placeholder="Search"
                   aria-label="Search"
                   className="w-full bg-transparent px-3 outline-none placeholder:text-white/35"

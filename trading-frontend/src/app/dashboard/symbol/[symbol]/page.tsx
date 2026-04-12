@@ -71,7 +71,7 @@ export default function SymbolResearchPage() {
 
     setAddingToList(true);
     try {
-      let folders = await getWatchlistFolders(token);
+      const folders = await getWatchlistFolders(token);
       let targetFolderId = folders[0]?.id;
 
       if (!targetFolderId) {
@@ -102,14 +102,14 @@ export default function SymbolResearchPage() {
     async function load() {
       try {
         const [researchResponse, chartResponse] = await Promise.all([
-          getResearch(symbol).catch((err: any) => {
+          getResearch(symbol).catch((err: unknown) => {
             console.warn(err);
             return null;
           }),
           getTimeSeries("equity", symbol, {
             range: activeRange.toLowerCase(),
             interval: getRangeInterval(activeRange),
-          }).catch((err: any) => {
+          }).catch((err: unknown) => {
             console.warn(err);
             return [];
           }),
@@ -296,6 +296,7 @@ export default function SymbolResearchPage() {
                   <TradingChart
                     data={chartData}
                     variant={chartVariant}
+                    referencePrice={research?.previousClose ?? null}
                     onHoverPrice={(price, time) => {
                       setHoveredPrice(price);
                       setHoveredTime(time);

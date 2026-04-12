@@ -28,7 +28,7 @@ export function WatchlistAddButton({ symbol, exchange, className }: WatchlistAdd
 
     setLoading(true);
     try {
-      let folders = await getWatchlistFolders(token);
+      const folders = await getWatchlistFolders(token);
       let targetFolderId = folders[0]?.id;
 
       if (!targetFolderId) {

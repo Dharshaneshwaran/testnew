@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { X, ArrowUpRight, ArrowDownRight, Activity } from "lucide-react";
 import { TradingChart } from "@/components/charts/TradingChart";
-import { getEquityQuote, getTimeSeries } from "@/lib/api/market";
+import { getEquityQuote, getTimeSeries, type EquityQuote } from "@/lib/api/market";
 import { PricePoint } from "@/types/market";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +16,7 @@ export function ClassicStockWidget({
   onClose: () => void;
   refreshInterval?: number;
 }) {
-  const [quote, setQuote] = useState<any>(null);
+  const [quote, setQuote] = useState<EquityQuote | null>(null);
   const [chartData, setChartData] = useState<PricePoint[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -49,7 +49,7 @@ export function ClassicStockWidget({
     };
   }, [symbol, refreshInterval]);
 
-  if (loading) {
+  if (loading || !quote) {
     return (
       <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-4 rounded-2xl border border-white/10 bg-white/[0.02] animate-pulse">
         <Activity className="h-8 w-8 text-white/20 animate-spin" />
