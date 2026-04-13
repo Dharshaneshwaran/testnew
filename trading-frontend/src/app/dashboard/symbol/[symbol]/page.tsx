@@ -21,6 +21,7 @@ import { MarketResearch, PricePoint } from "@/types/market";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { addWatchlistItem, getWatchlistFolders, createWatchlistFolder } from "@/lib/api/watchlist";
 import { getResearch, getTimeSeries } from "@/lib/api/market";
+import { MarketStreamMessage, openMarketStream } from "@/lib/api/marketStream";
 import { StockMoveAlertButton } from "@/components/watchlist/StockMoveAlertButton";
 
 const RANGE_TABS = ["1D", "5D", "1M", "6M", "YTD", "1Y", "5Y", "MAX"] as const;
@@ -141,6 +142,55 @@ export default function SymbolResearchPage() {
 
     return () => {
       active = false;
+    };
+  }, [symbol, activeRange]);
+
+  useEffect(() => {
+    if (!symbol) return;
+    if (activeRange !== "1D" && activeRange !== "5D") return;
+
+    const refreshMs = Number(process.env.NEXT_PUBLIC_MARKET_REFRESH_MS ?? 5000);
+    const intervalMs = Number.isFinite(refreshMs) ? refreshMs : 5000;
+    const interval = getRangeInterval(activeRange);
+    const bucketMs = intervalToBucketMs(interval);
+
+    const source = openMarketStream({ kind: "equity", symbol, intervalMs });
+
+    source.onmessage = (event) => {
+      let message: MarketStreamMessage;
+      try {
+        message = JSON.parse(event.data) as MarketStreamMessage;
+      } catch {
+        return;
+      }
+
+      if (message.type !== "quote") return;
+
+      setResearch((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          price: message.price,
+          change: typeof message.change === "number" ? message.change : prev.change,
+          changePercent:
+            typeof message.changePercent === "number" ? message.changePercent : prev.changePercent,
+          open: typeof message.open === "number" ? message.open : prev.open,
+          previousClose:
+            typeof message.previousClose === "number" ? message.previousClose : prev.previousClose,
+          volume: typeof message.volume === "number" ? message.volume : prev.volume,
+          dayHigh: typeof message.dayHigh === "number" ? message.dayHigh : prev.dayHigh,
+          dayLow: typeof message.dayLow === "number" ? message.dayLow : prev.dayLow,
+          timestamp: message.timestamp,
+        };
+      });
+
+      setChartData((prev) =>
+        upsertChartPoint(prev, { time: message.timestamp, value: message.price }, bucketMs),
+      );
+    };
+
+    return () => {
+      source.close();
     };
   }, [symbol, activeRange]);
 
@@ -548,4 +598,59 @@ function InsightCard({
       </div>
     </div>
   );
+}
+
+function intervalToBucketMs(interval: string) {
+  switch (interval) {
+    case "1m":
+      return 60_000;
+    case "5m":
+      return 5 * 60_000;
+    case "30m":
+      return 30 * 60_000;
+    default:
+      return 60_000;
+  }
+}
+
+function upsertChartPoint(points: PricePoint[], incoming: PricePoint, bucketMs: number) {
+  if (points.length === 0) {
+    return [incoming];
+  }
+
+  const incomingTime = new Date(incoming.time).getTime();
+  if (!Number.isFinite(incomingTime)) {
+    return points;
+  }
+
+  const lastIndex = points.length - 1;
+  const last = points[lastIndex];
+  if (!last) {
+    return [incoming];
+  }
+
+  const lastTime = new Date(last.time).getTime();
+  if (!Number.isFinite(lastTime)) {
+    return [...points, incoming];
+  }
+
+  const incomingBucket = Math.floor(incomingTime / bucketMs);
+  const lastBucket = Math.floor(lastTime / bucketMs);
+
+  if (incomingTime < lastTime) {
+    if (incomingBucket <= lastBucket) {
+      const next = [...points];
+      next[lastIndex] = { time: last.time, value: incoming.value };
+      return next;
+    }
+    return points;
+  }
+
+  if (incomingBucket === lastBucket) {
+    const next = [...points];
+    next[lastIndex] = incoming;
+    return next;
+  }
+
+  return [...points, incoming];
 }

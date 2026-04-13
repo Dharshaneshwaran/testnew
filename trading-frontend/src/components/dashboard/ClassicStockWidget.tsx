@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { X, ArrowUpRight, ArrowDownRight, Activity } from "lucide-react";
 import { TradingChart } from "@/components/charts/TradingChart";
 import { getEquityQuote, getTimeSeries, type EquityQuote } from "@/lib/api/market";
+import { MarketStreamMessage, openMarketStream } from "@/lib/api/marketStream";
 import { PricePoint } from "@/types/market";
 import { cn } from "@/lib/utils";
 
@@ -22,8 +23,9 @@ export function ClassicStockWidget({
 
   useEffect(() => {
     let active = true;
+    let source: EventSource | null = null;
 
-    async function loadData() {
+    async function loadInitial() {
       try {
         const [nextQuote, nextChart] = await Promise.all([
           getEquityQuote(symbol),
@@ -40,12 +42,48 @@ export function ClassicStockWidget({
       }
     }
 
-    loadData();
-    const timer = setInterval(loadData, refreshInterval);
+    void loadInitial();
+
+    source = openMarketStream({ kind: "equity", symbol, intervalMs: refreshInterval });
+
+    source.onmessage = (event) => {
+      if (!active) return;
+
+      let message: MarketStreamMessage;
+      try {
+        message = JSON.parse(event.data) as MarketStreamMessage;
+      } catch {
+        return;
+      }
+
+      if (message.type !== "quote") return;
+
+      setQuote((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          price: message.price,
+          change: typeof message.change === "number" ? message.change : prev.change,
+          changePercent:
+            typeof message.changePercent === "number" ? message.changePercent : prev.changePercent,
+          open: typeof message.open === "number" ? message.open : prev.open,
+          previousClose:
+            typeof message.previousClose === "number" ? message.previousClose : prev.previousClose,
+          volume: typeof message.volume === "number" ? message.volume : prev.volume,
+          dayHigh: typeof message.dayHigh === "number" ? message.dayHigh : prev.dayHigh,
+          dayLow: typeof message.dayLow === "number" ? message.dayLow : prev.dayLow,
+          timestamp: message.timestamp,
+        };
+      });
+
+      setChartData((prev) =>
+        upsertChartPoint(prev, { time: message.timestamp, value: message.price }, 60_000),
+      );
+    };
 
     return () => {
       active = false;
-      clearInterval(timer);
+      source?.close();
     };
   }, [symbol, refreshInterval]);
 
@@ -107,4 +145,44 @@ export function ClassicStockWidget({
       </div>
     </div>
   );
+}
+
+function upsertChartPoint(points: PricePoint[], incoming: PricePoint, bucketMs: number) {
+  if (points.length === 0) {
+    return [incoming];
+  }
+
+  const incomingTime = new Date(incoming.time).getTime();
+  if (!Number.isFinite(incomingTime)) {
+    return points;
+  }
+
+  const lastIndex = points.length - 1;
+  const last = points[lastIndex];
+  if (!last) {
+    return [incoming];
+  }
+
+  const lastTime = new Date(last.time).getTime();
+  if (!Number.isFinite(lastTime)) {
+    return [...points, incoming];
+  }
+
+  const incomingBucket = Math.floor(incomingTime / bucketMs);
+  const lastBucket = Math.floor(lastTime / bucketMs);
+  if (incomingTime < lastTime) {
+    if (incomingBucket <= lastBucket) {
+      const next = [...points];
+      next[lastIndex] = { time: last.time, value: incoming.value };
+      return next;
+    }
+    return points;
+  }
+  if (incomingBucket === lastBucket) {
+    const next = [...points];
+    next[lastIndex] = incoming;
+    return next;
+  }
+
+  return [...points, incoming];
 }

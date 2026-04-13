@@ -58,7 +58,11 @@ export class WatchlistController {
     @CurrentUser() user: { id: string },
     @Body() dto: { folderId: string; symbol: string },
   ) {
-    return this.watchlistService.removeItemBySymbol(user.id, dto.folderId, dto.symbol);
+    return this.watchlistService.removeItemBySymbol(
+      user.id,
+      dto.folderId,
+      dto.symbol,
+    );
   }
 
   @Delete('folders/:id')

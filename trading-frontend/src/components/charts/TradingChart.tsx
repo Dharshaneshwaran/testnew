@@ -38,12 +38,19 @@ export function TradingChart({
   data,
   variant = "area",
   onHoverPrice,
+  onHoverCandle,
   referencePrice,
+  timeZone = "Asia/Kolkata",
 }: {
   data: PricePoint[];
   variant?: TradingChartVariant;
   onHoverPrice?: (price: number | null, time: string | null) => void;
+  onHoverCandle?: (
+    candle: { open: number; high: number; low: number; close: number } | null,
+    time: string | null,
+  ) => void;
   referencePrice?: number | null;
+  timeZone?: string;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
@@ -53,12 +60,17 @@ export function TradingChart({
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<SeriesHandle | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
-  const dataSignatureRef = useRef<string>("");
+  const dataMetaRef = useRef<{ first: string; last: string; len: number } | null>(null);
 
   const hoverCallbackRef = useRef<typeof onHoverPrice>(onHoverPrice);
   useEffect(() => {
     hoverCallbackRef.current = onHoverPrice;
   }, [onHoverPrice]);
+
+  const hoverCandleCallbackRef = useRef<typeof onHoverCandle>(onHoverCandle);
+  useEffect(() => {
+    hoverCandleCallbackRef.current = onHoverCandle;
+  }, [onHoverCandle]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -130,12 +142,12 @@ export function TradingChart({
         timeFormatter: (time: UTCTimestamp) => {
           const date = new Date(Number(time) * 1000);
           if (Number.isNaN(date.getTime())) return String(time);
-          const day = date.getDate().toString().padStart(2, "0");
-          const month = date.toLocaleString("en-IN", { month: "short" });
-          const year = date.getFullYear().toString().slice(-2);
-          const hours = date.getHours().toString().padStart(2, "0");
-          const minutes = date.getMinutes().toString().padStart(2, "0");
-          return `${day} ${month} '${year} ${hours}:${minutes}`;
+          return new Intl.DateTimeFormat("en-IN", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+            timeZone,
+          }).format(date);
         },
       },
     });
@@ -181,6 +193,7 @@ export function TradingChart({
       ) {
         tooltip.style.display = "none";
         hoverCallbackRef.current?.(null, null);
+        hoverCandleCallbackRef.current?.(null, null);
         return;
       }
 
@@ -192,8 +205,27 @@ export function TradingChart({
         | undefined;
 
       let value: number | null = null;
+      let candle: { open: number; high: number; low: number; close: number } | null = null;
       if (priceObj && "value" in priceObj && typeof priceObj.value === "number") {
         value = priceObj.value;
+      } else if (
+        priceObj &&
+        "open" in priceObj &&
+        "high" in priceObj &&
+        "low" in priceObj &&
+        "close" in priceObj &&
+        typeof priceObj.open === "number" &&
+        typeof priceObj.high === "number" &&
+        typeof priceObj.low === "number" &&
+        typeof priceObj.close === "number"
+      ) {
+        candle = {
+          open: priceObj.open,
+          high: priceObj.high,
+          low: priceObj.low,
+          close: priceObj.close,
+        };
+        value = priceObj.close;
       } else if (priceObj && "close" in priceObj && typeof priceObj.close === "number") {
         value = priceObj.close;
       }
@@ -201,18 +233,23 @@ export function TradingChart({
       if (value === null) {
         tooltip.style.display = "none";
         hoverCallbackRef.current?.(null, null);
+        hoverCandleCallbackRef.current?.(null, null);
         return;
       }
 
       let dateStr: string;
       if (typeof param.time === "number") {
-        dateStr = new Date(param.time * 1000).toLocaleString("en-IN", {
-          day: "numeric",
+        dateStr = new Intl.DateTimeFormat("en-IN", {
+          day: "2-digit",
           month: "short",
-          hour: "numeric",
+          year: "2-digit",
+          hour: "2-digit",
           minute: "2-digit",
+          second: "2-digit",
           hour12: true,
-        });
+          timeZone,
+          timeZoneName: "short",
+        }).format(new Date(param.time * 1000));
       } else {
         dateStr = String(param.time);
       }
@@ -221,6 +258,7 @@ export function TradingChart({
       tooltipPrice.textContent = `${currencySymbol()}${value.toFixed(2)}`;
       tooltipTime.textContent = dateStr;
       hoverCallbackRef.current?.(value, dateStr);
+      hoverCandleCallbackRef.current?.(candle, dateStr);
 
       const toolTipWidth = 160;
       const toolTipHeight = 66;
@@ -279,11 +317,35 @@ export function TradingChart({
     const chart = chartRef.current;
     const handles = seriesRef.current;
     if (!chart || !handles) return;
-    const signature =
-      data.length === 0 ? "empty" : `${data[0]!.time}|${data[data.length - 1]!.time}|${data.length}`;
-    const shouldFit = signature !== dataSignatureRef.current;
-    dataSignatureRef.current = signature;
+
+    const beforeRange = chart.timeScale().getVisibleLogicalRange();
+
+    const nextMeta =
+      data.length === 0
+        ? { first: "", last: "", len: 0 }
+        : { first: data[0]!.time, last: data[data.length - 1]!.time, len: data.length };
+    const prevMeta = dataMetaRef.current;
+
+    // Fit only when we load/replace a dataset (range tab change, symbol change, etc).
+    const shouldFit =
+      !prevMeta ||
+      prevMeta.len === 0 ||
+      nextMeta.len === 0 ||
+      nextMeta.first !== prevMeta.first ||
+      nextMeta.len < prevMeta.len;
+
+    dataMetaRef.current = nextMeta;
+
     syncChartData(chart, handles, data, referencePrice ?? null, shouldFit);
+
+    // If the user is already at the right edge, keep tracking live updates without resetting zoom.
+    if (!shouldFit && beforeRange) {
+      const lastIndex = Math.max(0, data.length - 1);
+      const distanceFromRight = lastIndex - beforeRange.to;
+      if (distanceFromRight <= 2) {
+        chart.timeScale().scrollToRealTime();
+      }
+    }
   }, [data, referencePrice]);
 
   return (
@@ -308,7 +370,9 @@ function syncChartData(
   referencePrice: number | null,
   fitContent: boolean,
 ) {
-  if (data.length === 0) {
+  const normalized = normalizePricePoints(data);
+
+  if (normalized.length === 0) {
     if (handles.variant === "candles") {
       (handles.primarySeries as ISeriesApi<"Candlestick">).setData([]);
     } else {
@@ -319,7 +383,7 @@ function syncChartData(
     return;
   }
 
-  const rows = buildChartRows(data);
+  const rows = buildChartRows(normalized);
 
   if (handles.variant === "candles") {
     (handles.primarySeries as ISeriesApi<"Candlestick">).setData(rows.candleData);
@@ -420,6 +484,51 @@ function buildChartRows(data: PricePoint[]) {
 function toChartTime(time: string, index: number) {
   const parsed = Math.floor(new Date(time).getTime() / 1000);
   return (Number.isFinite(parsed) && parsed > 0 ? parsed : index + 1) as UTCTimestamp;
+}
+
+function normalizePricePoints(data: PricePoint[]) {
+  const rows = data
+    .map((point, index) => {
+      const timeMs = new Date(point.time).getTime();
+      if (!Number.isFinite(timeMs) || timeMs <= 0) {
+        return null;
+      }
+      if (typeof point.value !== "number" || !Number.isFinite(point.value)) {
+        return null;
+      }
+      return {
+        index,
+        second: Math.floor(timeMs / 1000),
+        time: point.time,
+        value: point.value,
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => row !== null)
+    .sort((a, b) => (a.second === b.second ? a.index - b.index : a.second - b.second));
+
+  if (rows.length <= 1) {
+    return rows.map(({ time, value }) => ({ time, value }));
+  }
+
+  const result: PricePoint[] = [];
+  for (const row of rows) {
+    const last = result[result.length - 1];
+    if (!last) {
+      result.push({ time: row.time, value: row.value });
+      continue;
+    }
+
+    const lastSec = Math.floor(new Date(last.time).getTime() / 1000);
+    if (lastSec === row.second) {
+      // overwrite duplicates within the same second (keeps series strictly ascending)
+      result[result.length - 1] = { time: row.time, value: row.value };
+      continue;
+    }
+
+    result.push({ time: row.time, value: row.value });
+  }
+
+  return result;
 }
 
 function toCandlesFromPoints(data: PricePoint[]) {

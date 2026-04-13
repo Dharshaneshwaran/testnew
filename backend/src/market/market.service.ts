@@ -15,6 +15,7 @@ type FuturesKind = 'stock' | 'index';
 
 const STOCK_FUTURES_SYMBOLS = ['RELIANCE', 'SBIN', 'TCS', 'INFY', 'HDFCBANK'];
 const INDEX_FUTURES_SYMBOLS = ['NIFTY', 'BANKNIFTY', 'SENSEX'];
+const INDEX_SYMBOLS = ['NIFTY', 'BANKNIFTY', 'SENSEX'];
 const MOVER_SYMBOLS = [
   'RELIANCE',
   'HDFCBANK',
@@ -231,6 +232,7 @@ const SEARCH_ITEMS: MarketSearchItem[] = [
     hint: 'NSE Equity',
     route: '/dashboard/equity/nse',
     keywords: [symbol.toLowerCase(), symbol.replace('-', ' ').toLowerCase()],
+    symbol,
   })),
 ];
 
@@ -336,11 +338,97 @@ export class MarketService {
       return [];
     }
 
-    return SEARCH_ITEMS.filter((item) =>
+    const baseMatches = SEARCH_ITEMS.filter((item) =>
       [item.label, item.hint, ...item.keywords].some((value) =>
         value.toLowerCase().includes(normalized),
       ),
-    ).slice(0, 8);
+    );
+
+    const dynamicMatches = this.buildDerivativeSearchItems(normalized);
+
+    const merged = [...dynamicMatches, ...baseMatches];
+    const seen = new Set<string>();
+    const unique = merged.filter((item) => {
+      if (seen.has(item.route)) return false;
+      seen.add(item.route);
+      return true;
+    });
+
+    return unique.slice(0, 8);
+  }
+
+  private buildDerivativeSearchItems(
+    normalizedQuery: string,
+  ): MarketSearchItem[] {
+    const q = normalizedQuery.replace(/\s+/g, '').toUpperCase();
+    if (!q) {
+      return [];
+    }
+
+    const matchedIndices = INDEX_SYMBOLS.filter((symbol) =>
+      symbol.includes(q),
+    ).slice(0, 2);
+    const matchedEquities = MOVER_SYMBOLS.filter((symbol) =>
+      symbol.includes(q),
+    ).slice(0, 2);
+
+    const items: MarketSearchItem[] = [];
+
+    for (const symbol of matchedEquities) {
+      items.push({
+        label: `${symbol} Futures`,
+        hint: 'Stock Futures',
+        route: `/dashboard/futures/stock?symbol=${encodeURIComponent(symbol)}`,
+        keywords: [
+          symbol.toLowerCase(),
+          `${symbol.toLowerCase()} futures`,
+          'futures',
+          'derivatives',
+        ],
+        symbol,
+      });
+      items.push({
+        label: `${symbol} Options`,
+        hint: 'Stock Options',
+        route: `/dashboard/options/stock?symbol=${encodeURIComponent(symbol)}`,
+        keywords: [
+          symbol.toLowerCase(),
+          `${symbol.toLowerCase()} options`,
+          'options',
+          'derivatives',
+        ],
+        symbol,
+      });
+    }
+
+    for (const symbol of matchedIndices) {
+      items.push({
+        label: `${symbol} Futures`,
+        hint: 'Index Futures',
+        route: `/dashboard/futures/index?symbol=${encodeURIComponent(symbol)}`,
+        keywords: [
+          symbol.toLowerCase(),
+          `${symbol.toLowerCase()} futures`,
+          'futures',
+          'derivatives',
+        ],
+        symbol,
+      });
+      items.push({
+        label: `${symbol} Options`,
+        hint: 'Index Options',
+        route: `/dashboard/options/index?symbol=${encodeURIComponent(symbol)}`,
+        keywords: [
+          symbol.toLowerCase(),
+          `${symbol.toLowerCase()} options`,
+          'options',
+          'derivatives',
+        ],
+        symbol,
+      });
+    }
+
+    return items;
   }
 
   async getResearch(symbol: string): Promise<MarketResearch> {
@@ -367,7 +455,8 @@ export class MarketService {
     const yearLow = Number(Math.min(...yearValues, quote.dayLow).toFixed(2));
     const momentum =
       first === 0 ? 0 : Number((((last - first) / first) * 100).toFixed(2));
-    const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+    const average =
+      values.reduce((sum, value) => sum + value, 0) / values.length;
     const variance =
       values.reduce((sum, value) => sum + (value - average) ** 2, 0) /
       Math.max(values.length, 1);
@@ -380,7 +469,12 @@ export class MarketService {
       exchange: meta.exchange,
       sector: meta.sector,
       stance,
-      summary: this.buildSummary(meta.name, meta.sector, quote.changePercent, momentum),
+      summary: this.buildSummary(
+        meta.name,
+        meta.sector,
+        quote.changePercent,
+        momentum,
+      ),
       price: quote.price,
       change: quote.change,
       changePercent: quote.changePercent,
@@ -433,6 +527,58 @@ export class MarketService {
     );
   }
 
+  async getFuture(kind: FuturesKind, symbol: string): Promise<FutureQuote> {
+    const normalized = symbol.toUpperCase();
+    const seed = this.resolveFutureSeed(kind, normalized);
+
+    if (kind === 'stock') {
+      const quote = await this.provider.getEquityQuote(normalized);
+      return this.toFutureQuote(
+        quote.symbol,
+        quote.price,
+        quote.changePercent,
+        {
+          kind,
+          timestamp: quote.timestamp,
+          seed,
+        },
+      );
+    }
+
+    const quote = await this.provider.getIndexQuote(normalized);
+    return this.toFutureQuote(quote.symbol, quote.price, quote.changePercent, {
+      kind,
+      timestamp: quote.timestamp,
+      seed,
+    });
+  }
+
+  async getFutureTimeSeries(
+    kind: FuturesKind,
+    symbol: string,
+    range?: string,
+    interval?: string,
+  ) {
+    const normalized = symbol.toUpperCase();
+    const seed = this.resolveFutureSeed(kind, normalized);
+    const basisMultiplier = kind === 'index' ? 0.0019 : 0.0028;
+    const sign = seed % 2 === 0 ? 1 : -1;
+
+    const points = await this.provider.getTimeSeries(
+      normalized,
+      kind === 'index' ? 'index' : 'equity',
+      range,
+      interval,
+    );
+
+    return points.map((point) => ({
+      time: point.time,
+      value: Number(
+        (point.value + point.value * basisMultiplier * sign).toFixed(2),
+      ),
+    }));
+  }
+
   private toFutureQuote(
     symbol: string,
     spotPrice: number,
@@ -463,6 +609,22 @@ export class MarketService {
     };
   }
 
+  private resolveFutureSeed(kind: FuturesKind, symbol: string) {
+    const universe =
+      kind === 'stock' ? STOCK_FUTURES_SYMBOLS : INDEX_FUTURES_SYMBOLS;
+    const index = universe.indexOf(symbol);
+    if (index >= 0) {
+      return index;
+    }
+
+    // deterministic fallback for symbols outside the default universe
+    let hash = 0;
+    for (let i = 0; i < symbol.length; i++) {
+      hash = (hash * 31 + symbol.charCodeAt(i)) >>> 0;
+    }
+    return hash % 8;
+  }
+
   private getMonthlyExpiryLabel(date: Date) {
     return date
       .toLocaleString('en-US', {
@@ -491,9 +653,13 @@ export class MarketService {
     momentum: number,
   ) {
     const intradayTone =
-      changePercent >= 0 ? 'holding positive intraday breadth' : 'trading with intraday pressure';
+      changePercent >= 0
+        ? 'holding positive intraday breadth'
+        : 'trading with intraday pressure';
     const momentumTone =
-      momentum >= 0 ? 'Recent momentum remains constructive.' : 'Recent momentum is mixed.';
+      momentum >= 0
+        ? 'Recent momentum remains constructive.'
+        : 'Recent momentum is mixed.';
 
     return `${name} in ${sector} is ${intradayTone}. ${momentumTone}`;
   }

@@ -39,7 +39,15 @@ export function WatchlistFolder({
     setIsLoading(true);
     try {
       const searchResults = await searchMarket(query);
-      setResults(searchResults.slice(0, 5));
+      setResults(
+        searchResults
+          .filter(
+            (item) =>
+              !item.route.startsWith("/dashboard/futures") &&
+              !item.route.startsWith("/dashboard/options"),
+          )
+          .slice(0, 5),
+      );
     } catch (err) {
       console.error("Search failed", err);
     } finally {

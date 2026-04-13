@@ -19,6 +19,7 @@ interface YahooQuoteResult {
   regularMarketDayHigh?: number;
   regularMarketDayLow?: number;
   regularMarketOpen?: number;
+  regularMarketPreviousClose?: number;
   regularMarketTime?: number;
   shortName?: string;
   symbol?: string;
@@ -69,7 +70,7 @@ const EQUITY_SYMBOL_MAP: Record<string, string> = {
   SBIN: 'SBIN.NS',
   INFY: 'INFY.NS',
   ONGC: 'ONGC.NS',
-  TATAMOTORS: 'TMPV.NS',
+  TATAMOTORS: 'TATAMOTORS.NS',
   HCLTECH: 'HCLTECH.NS',
   POWERGRID: 'POWERGRID.NS',
 };
@@ -88,64 +89,145 @@ export class YahooMarketProvider implements MarketDataProvider {
 
   async getEquityQuote(symbol: string): Promise<EquityQuote> {
     const normalizedSymbol = symbol.toUpperCase();
-    const yahooSymbol = 
-      EQUITY_SYMBOL_MAP[normalizedSymbol] ?? 
-      INDEX_SYMBOL_MAP[normalizedSymbol] ?? 
+    const yahooSymbol =
+      EQUITY_SYMBOL_MAP[normalizedSymbol] ??
+      INDEX_SYMBOL_MAP[normalizedSymbol] ??
       `${normalizedSymbol}.NS`;
 
-    const chart = await this.fetchChart(
-      yahooSymbol,
-      '1d',
-      '1d',
-    );
-    const price = chart.meta?.regularMarketPrice ?? this.getLastClose(chart) ?? 0;
-    const previousClose =
-      chart.meta?.previousClose ?? chart.meta?.chartPreviousClose ?? price;
-    const change = Number((price - previousClose).toFixed(2));
+    let quote: YahooQuoteResult | null = null;
+    try {
+      quote = await this.fetchQuote(yahooSymbol);
+    } catch {
+      quote = null;
+    }
+
+    if (!quote?.regularMarketPrice) {
+      const chart = await this.fetchChart(yahooSymbol, '1d', '1d');
+      const price =
+        chart.meta?.regularMarketPrice ?? this.getLastClose(chart) ?? 0;
+      const previousClose =
+        chart.meta?.previousClose ?? chart.meta?.chartPreviousClose ?? price;
+      const change = Number((price - previousClose).toFixed(2));
+      const changePercent =
+        previousClose === 0
+          ? 0
+          : Number(((change / previousClose) * 100).toFixed(2));
+
+      return {
+        symbol: normalizedSymbol,
+        name: normalizedSymbol,
+        price,
+        change,
+        changePercent,
+        open:
+          chart.meta?.regularMarketOpen ??
+          this.getFirstOpen(chart) ??
+          previousClose,
+        previousClose,
+        volume:
+          chart.meta?.regularMarketVolume ?? this.getLastVolume(chart) ?? 0,
+        dayHigh:
+          chart.meta?.regularMarketDayHigh ?? this.getMaxHigh(chart) ?? price,
+        dayLow:
+          chart.meta?.regularMarketDayLow ?? this.getMinLow(chart) ?? price,
+        timestamp: this.toIsoString(chart.meta?.regularMarketTime),
+      };
+    }
+
+    const price = quote.regularMarketPrice ?? 0;
+    const previousClose = quote.regularMarketPreviousClose ?? price;
+    const change =
+      typeof quote.regularMarketChange === 'number'
+        ? Number(quote.regularMarketChange.toFixed(2))
+        : Number((price - previousClose).toFixed(2));
     const changePercent =
-      previousClose === 0 ? 0 : Number(((change / previousClose) * 100).toFixed(2));
+      typeof quote.regularMarketChangePercent === 'number'
+        ? Number(quote.regularMarketChangePercent.toFixed(2))
+        : previousClose === 0
+          ? 0
+          : Number(((change / previousClose) * 100).toFixed(2));
 
     return {
       symbol: normalizedSymbol,
-      name: normalizedSymbol,
-      price,
+      name: quote.shortName ?? normalizedSymbol,
+      price: Number(price.toFixed(2)),
       change,
       changePercent,
-      open: chart.meta?.regularMarketOpen ?? this.getFirstOpen(chart) ?? previousClose,
+      open: quote.regularMarketOpen ?? previousClose,
       previousClose,
-      volume: chart.meta?.regularMarketVolume ?? this.getLastVolume(chart) ?? 0,
-      dayHigh: chart.meta?.regularMarketDayHigh ?? this.getMaxHigh(chart) ?? price,
-      dayLow: chart.meta?.regularMarketDayLow ?? this.getMinLow(chart) ?? price,
-      timestamp: this.toIsoString(chart.meta?.regularMarketTime),
+      volume: quote.regularMarketVolume ?? 0,
+      dayHigh: quote.regularMarketDayHigh ?? price,
+      dayLow: quote.regularMarketDayLow ?? price,
+      timestamp: this.toIsoString(quote.regularMarketTime),
     };
   }
 
   async getIndexQuote(symbol: string): Promise<IndexQuote> {
     const normalizedSymbol = symbol.toUpperCase();
-    const chart = await this.fetchChart(
-      INDEX_SYMBOL_MAP[normalizedSymbol] ?? normalizedSymbol,
-      '1d',
-      '1d',
-    );
-    const price = chart.meta?.regularMarketPrice ?? this.getLastClose(chart) ?? 0;
-    const previousClose =
-      chart.meta?.previousClose ?? chart.meta?.chartPreviousClose ?? price;
-    const change = Number((price - previousClose).toFixed(2));
+    const yahooSymbol = INDEX_SYMBOL_MAP[normalizedSymbol] ?? normalizedSymbol;
+
+    let quote: YahooQuoteResult | null = null;
+    try {
+      quote = await this.fetchQuote(yahooSymbol);
+    } catch {
+      quote = null;
+    }
+
+    if (!quote?.regularMarketPrice) {
+      const chart = await this.fetchChart(yahooSymbol, '1d', '1d');
+      const price =
+        chart.meta?.regularMarketPrice ?? this.getLastClose(chart) ?? 0;
+      const previousClose =
+        chart.meta?.previousClose ?? chart.meta?.chartPreviousClose ?? price;
+      const change = Number((price - previousClose).toFixed(2));
+      const changePercent =
+        previousClose === 0
+          ? 0
+          : Number(((change / previousClose) * 100).toFixed(2));
+      const open =
+        chart.meta?.regularMarketOpen ?? this.getFirstOpen(chart) ?? price;
+      const high =
+        chart.meta?.regularMarketDayHigh ?? this.getMaxHigh(chart) ?? price;
+      const low =
+        chart.meta?.regularMarketDayLow ?? this.getMinLow(chart) ?? price;
+
+      return {
+        symbol: normalizedSymbol,
+        price,
+        change,
+        changePercent,
+        open,
+        high,
+        low,
+        timestamp: this.toIsoString(chart.meta?.regularMarketTime),
+      };
+    }
+
+    const price = quote.regularMarketPrice ?? 0;
+    const previousClose = quote.regularMarketPreviousClose ?? price;
+    const change =
+      typeof quote.regularMarketChange === 'number'
+        ? Number(quote.regularMarketChange.toFixed(2))
+        : Number((price - previousClose).toFixed(2));
     const changePercent =
-      previousClose === 0 ? 0 : Number(((change / previousClose) * 100).toFixed(2));
-    const open = chart.meta?.regularMarketOpen ?? this.getFirstOpen(chart) ?? price;
-    const high = chart.meta?.regularMarketDayHigh ?? this.getMaxHigh(chart) ?? price;
-    const low = chart.meta?.regularMarketDayLow ?? this.getMinLow(chart) ?? price;
+      typeof quote.regularMarketChangePercent === 'number'
+        ? Number(quote.regularMarketChangePercent.toFixed(2))
+        : previousClose === 0
+          ? 0
+          : Number(((change / previousClose) * 100).toFixed(2));
+    const open = quote.regularMarketOpen ?? price;
+    const high = quote.regularMarketDayHigh ?? price;
+    const low = quote.regularMarketDayLow ?? price;
 
     return {
       symbol: normalizedSymbol,
-      price,
+      price: Number(price.toFixed(2)),
       change,
       changePercent,
       open,
       high,
       low,
-      timestamp: this.toIsoString(chart.meta?.regularMarketTime),
+      timestamp: this.toIsoString(quote.regularMarketTime),
     };
   }
 
@@ -158,8 +240,8 @@ export class YahooMarketProvider implements MarketDataProvider {
     const normalizedSymbol = symbol.toUpperCase();
     const yahooSymbol =
       kind === 'index'
-        ? INDEX_SYMBOL_MAP[normalizedSymbol] ?? normalizedSymbol
-        : EQUITY_SYMBOL_MAP[normalizedSymbol] ?? `${normalizedSymbol}.NS`;
+        ? (INDEX_SYMBOL_MAP[normalizedSymbol] ?? normalizedSymbol)
+        : (EQUITY_SYMBOL_MAP[normalizedSymbol] ?? `${normalizedSymbol}.NS`);
     const result = await this.fetchChart(yahooSymbol, range, interval);
     const timestamps = result?.timestamp ?? [];
     const closes = result?.indicators?.quote?.[0]?.close ?? [];
@@ -191,7 +273,10 @@ export class YahooMarketProvider implements MarketDataProvider {
     range: string,
     interval: string,
   ) {
-    const url = new URL(`/v8/finance/chart/${encodeURIComponent(yahooSymbol)}`, this.baseUrl);
+    const url = new URL(
+      `/v8/finance/chart/${encodeURIComponent(yahooSymbol)}`,
+      this.baseUrl,
+    );
     url.searchParams.set('range', range);
     url.searchParams.set('interval', interval);
     url.searchParams.set('includePrePost', 'false');
@@ -231,14 +316,57 @@ export class YahooMarketProvider implements MarketDataProvider {
     return result;
   }
 
+  private async fetchQuote(yahooSymbol: string) {
+    const url = new URL('/v7/finance/quote', this.baseUrl);
+    url.searchParams.set('symbols', yahooSymbol);
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        signal: AbortSignal.timeout(8000),
+        headers: {
+          Accept: 'application/json',
+          'Accept-Language': 'en-US,en;q=0.9',
+          Referer: 'https://finance.yahoo.com/',
+          'User-Agent': 'Mozilla/5.0',
+        },
+      });
+    } catch (error) {
+      throw new ServiceUnavailableException(
+        `Yahoo quote request failed for ${yahooSymbol}`,
+        { cause: error as Error },
+      );
+    }
+
+    if (!response.ok) {
+      throw new ServiceUnavailableException(
+        `Yahoo quote request returned ${response.status} for ${yahooSymbol}`,
+      );
+    }
+
+    const payload = (await response.json()) as YahooQuoteResponse;
+    const result = payload.quoteResponse?.result?.[0];
+    if (!result) {
+      throw new InternalServerErrorException(
+        `Yahoo provider returned no quote payload for ${yahooSymbol}`,
+      );
+    }
+
+    return result;
+  }
+
   private getLastClose(chart: YahooChartResult) {
     const closes = chart.indicators?.quote?.[0]?.close ?? [];
-    return [...closes].reverse().find((value): value is number => typeof value === 'number');
+    return [...closes]
+      .reverse()
+      .find((value): value is number => typeof value === 'number');
   }
 
   private getLastVolume(chart: YahooChartResult) {
     const volumes = chart.indicators?.quote?.[0]?.volume ?? [];
-    return [...volumes].reverse().find((value): value is number => typeof value === 'number');
+    return [...volumes]
+      .reverse()
+      .find((value): value is number => typeof value === 'number');
   }
 
   private getMaxHigh(chart: YahooChartResult) {

@@ -44,6 +44,8 @@ export class MockMarketProvider implements MarketDataProvider {
     _range = '1d',
     _interval = '30m',
   ): Promise<TimeSeriesPoint[]> {
+    void _range;
+    void _interval;
     const quote =
       kind === 'index'
         ? await this.getIndexQuote(symbol)

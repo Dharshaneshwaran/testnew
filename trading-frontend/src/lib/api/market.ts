@@ -8,6 +8,8 @@ import {
   Ticker,
 } from '@/types/market';
 
+const ENABLE_MARKET_MOCKS = process.env.NEXT_PUBLIC_ENABLE_MARKET_MOCKS === 'true';
+
 export interface EquityQuote {
   symbol: string;
   name?: string;
@@ -75,6 +77,9 @@ export async function getEquityQuote(symbol: string) {
   try {
     return await apiRequest<EquityQuote>(`/market/equity/${encodeURIComponent(symbol)}`);
   } catch (e) {
+    if (!ENABLE_MARKET_MOCKS) {
+      throw e;
+    }
     return {
       symbol, name: `${symbol} Limited`, price: 2500, change: 15.4, changePercent: 0.62,
       open: 2490, previousClose: 2484.6, volume: 1500000, dayHigh: 2515, dayLow: 2480,
@@ -87,6 +92,9 @@ export async function getIndexQuote(symbol: string) {
   try {
     return await apiRequest<IndexQuote>(`/market/index/${encodeURIComponent(symbol)}`);
   } catch (e) {
+    if (!ENABLE_MARKET_MOCKS) {
+      throw e;
+    }
     const base = symbol === "NIFTY" ? 22000 : symbol === "SENSEX" ? 72000 : 47000;
     return {
       symbol, price: base + Math.random() * 100, change: 120.5, changePercent: 0.55,
@@ -107,34 +115,17 @@ export function getFutures(kind: "stock" | "index") {
   return apiRequest<FutureContract[]>(`/market/futures/${encodeURIComponent(kind)}`);
 }
 
+export function getFuture(kind: "stock" | "index", symbol: string) {
+  return apiRequest<FutureContract>(
+    `/market/futures/${encodeURIComponent(kind)}/${encodeURIComponent(symbol)}`,
+  );
+}
+
 export async function getTimeSeries(
   kind: "equity" | "index" | "stock",
   symbol: string,
   query: TimeSeriesQuery = {},
 ) {
-  const missingStocks = ["ZOMATO", "ITC", "ADANIENT", "AXISBANK"];
-  if (missingStocks.includes(symbol)) {
-    const points: PricePoint[] = [];
-    const base = symbol === "ZOMATO" ? 180 : symbol === "ITC" ? 430 : 1000;
-    
-    // vary points by range
-    const rangeLength = query.range || "1d";
-    let dataPoints = 20;
-    if (rangeLength === "5d") dataPoints = 40;
-    if (rangeLength === "1m") dataPoints = 60;
-    if (rangeLength === "6m") dataPoints = 100;
-    if (['ytd', '1y', '5y', 'max'].includes(rangeLength)) dataPoints = 150;
-
-    const now = new Date();
-    for (let i = dataPoints; i >= 0; i--) {
-      points.push({
-        time: new Date(now.getTime() - i * 3600000).toISOString(),
-        value: base + (Math.random() * 20 - 10)
-      });
-    }
-    return points;
-  }
-
   try {
     const params = new URLSearchParams();
     if (query.range) {
@@ -149,6 +140,9 @@ export async function getTimeSeries(
       `/market/timeseries/${encodeURIComponent(kind)}/${encodeURIComponent(symbol)}${suffix}`,
     );
   } catch (e) {
+    if (!ENABLE_MARKET_MOCKS) {
+      throw e;
+    }
     const points: PricePoint[] = [];
     const now = new Date();
     let val = 500;
@@ -164,6 +158,9 @@ export async function getMovers() {
   try {
     return await apiRequest<MoversResponse>('/market/movers');
   } catch (e) {
+    if (!ENABLE_MARKET_MOCKS) {
+      throw e;
+    }
     return {
       gainers: [
         { symbol: "ASIANPAINT", name: "Asian Paints Limited", ltp: 2360.70, change: 91.2, changePercent: 4.01 },
@@ -188,6 +185,9 @@ export async function getSectors() {
       leaders: sector.leaders,
     }));
   } catch (e) {
+    if (!ENABLE_MARKET_MOCKS) {
+      throw e;
+    }
     return [
       { name: "IT", performance: 1.2, leaders: ["TCS", "INFY"] },
       { name: "Banking", performance: -0.5, leaders: ["HDFCBANK", "ICICIBANK"] },
@@ -205,17 +205,19 @@ export async function searchMarket(query: string) {
     results = [];
   }
 
-  const missingStocks = ["ZOMATO", "ITC", "ADANIENT", "AXISBANK"];
-  if (results.length === 0 && query.trim().length > 0) {
-    const qUpper = query.toUpperCase();
-    const matches = missingStocks.filter(stock => stock.includes(qUpper));
-    results = matches.map(stock => ({
-      label: stock,
-      hint: "Equity",
-      route: `/dashboard/symbol/${stock}`,
-      keywords: [stock],
-      symbol: stock,
-    }));
+  if (ENABLE_MARKET_MOCKS) {
+    const missingStocks = ["ZOMATO", "ITC", "ADANIENT", "AXISBANK"];
+    if (results.length === 0 && query.trim().length > 0) {
+      const qUpper = query.toUpperCase();
+      const matches = missingStocks.filter((stock) => stock.includes(qUpper));
+      results = matches.map((stock) => ({
+        label: stock,
+        hint: "Equity",
+        route: `/dashboard/symbol/${stock}`,
+        keywords: [stock],
+        symbol: stock,
+      }));
+    }
   }
 
   // Add symbol mapping for indices
@@ -226,7 +228,10 @@ export async function searchMarket(query: string) {
   };
 
   return results.map(item => {
-    if (item.hint.includes("Equity") || item.hint.includes("Index") || item.hint.includes("Futures")) {
+    const isDerivativesRoute =
+      item.route.startsWith("/dashboard/futures") || item.route.startsWith("/dashboard/options");
+
+    if (!isDerivativesRoute && (item.hint.includes("Equity") || item.hint.includes("Index"))) {
       return { 
         ...item, 
         route: `/dashboard/symbol/${encodeURIComponent(item.label)}`,
@@ -237,37 +242,26 @@ export async function searchMarket(query: string) {
   });
 }
 
-export async function getResearch(symbol: string) {
-  const missingStocks = ["ZOMATO", "ITC", "ADANIENT", "AXISBANK"];
-  if (missingStocks.includes(symbol)) {
-    const basePrice = symbol === "ZOMATO" ? 182.4 : symbol === "ITC" ? 431.5 : 1005.2;
-    return {
-      symbol,
-      name: `${symbol} Limited`,
-      exchange: "NSE",
-      price: basePrice,
-      change: 2.4,
-      changePercent: 1.2,
-      open: basePrice - 1.5,
-      previousClose: basePrice - 2.4,
-      dayHigh: basePrice + 3.1,
-      dayLow: basePrice - 2.0,
-      yearHigh: basePrice * 1.4,
-      yearLow: basePrice * 0.7,
-      volume: 12500000,
-      support: basePrice * 0.95,
-      resistance: basePrice * 1.05,
-      volatility: 12.5,
-      momentum: 4.2,
-      sector: "Consumer Goods",
-      stance: "Bullish",
-      summary: `Research overview for ${symbol}. The company shows strong momentum in the recent quarter.`,
-      bullishPoints: [{ title: "Growth", detail: "Strong quarterly earnings." }],
-      riskPoints: [{ title: "Market", detail: "General sector slowdown risks." }],
-      peers: ["RELIANCE", "TCS"],
-      timestamp: new Date().toISOString()
-    } as unknown as MarketResearch;
+export async function getFutureTimeSeries(
+  kind: "stock" | "index",
+  symbol: string,
+  query: TimeSeriesQuery = {},
+) {
+  const params = new URLSearchParams();
+  if (query.range) {
+    params.set("range", query.range);
   }
+  if (query.interval) {
+    params.set("interval", query.interval);
+  }
+
+  const suffix = params.size > 0 ? `?${params.toString()}` : "";
+  return apiRequest<PricePoint[]>(
+    `/market/timeseries/futures/${encodeURIComponent(kind)}/${encodeURIComponent(symbol)}${suffix}`,
+  );
+}
+
+export async function getResearch(symbol: string) {
   return apiRequest<MarketResearch>(`/market/research/${encodeURIComponent(symbol)}`);
 }
 

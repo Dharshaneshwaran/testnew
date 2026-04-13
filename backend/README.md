@@ -57,6 +57,13 @@ $ npm run test:e2e
 $ npm run test:cov
 ```
 
+## Market data
+
+- REST quotes: `GET /market/equity/:symbol`, `GET /market/index/:symbol`
+- Time series: `GET /market/timeseries/:kind/:symbol?range=1d&interval=1m`
+- Live stream (SSE): `GET /market/stream/:kind/:symbol?intervalMs=5000` (kind: `equity` | `index`)
+- Provider selection: set `MARKET_DATA_PROVIDER=mock` (offline) or `MARKET_DATA_PROVIDER=yahoo` (default)
+
 ## Deployment
 
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.

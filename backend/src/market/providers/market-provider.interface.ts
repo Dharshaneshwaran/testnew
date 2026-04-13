@@ -60,6 +60,7 @@ export interface MarketSearchItem {
   hint: string;
   route: string;
   keywords: string[];
+  symbol?: string;
 }
 
 export interface ResearchInsight {

@@ -28,6 +28,12 @@ The dashboard supports a simple "push-like" alert for sudden stock moves (browse
 - Choose a % threshold and direction (up/down/both).
 - While the dashboard is open, the app polls quotes every ~30 seconds and notifies when the move exceeds your threshold.
 
+## Market charts (live)
+
+- Quotes and chart series come from the backend (`NEXT_PUBLIC_API_BASE_URL`).
+- The symbol page and classic widget use server-sent events (SSE) to update the last bar without reloading.
+- Optional mock fallback (disabled by default): set `NEXT_PUBLIC_ENABLE_MARKET_MOCKS=true`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

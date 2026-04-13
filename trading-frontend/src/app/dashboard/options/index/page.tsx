@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { Header } from "@/components/layout/Header";
 import { ExpiryDropdown } from "@/components/options/ExpiryDropdown";
@@ -11,6 +12,8 @@ import { getExpiries, getOptionChain } from "@/lib/api/options";
 import { ExpiryItem, OptionChainRow } from "@/types/option";
 
 export default function IndexOptionsPage() {
+  const searchParams = useSearchParams();
+  const symbol = (searchParams.get("symbol") ?? "NIFTY").trim().toUpperCase() || "NIFTY";
   const [expiries, setExpiries] = useState<ExpiryItem[]>([]);
   const [selectedExpiry, setSelectedExpiry] = useState("");
   const [rows, setRows] = useState<OptionChainRow[]>([]);
@@ -20,7 +23,11 @@ export default function IndexOptionsPage() {
   useEffect(() => {
     async function loadExpiries() {
       try {
-        const nextExpiries = await getExpiries("NIFTY");
+        setLoading(true);
+        setError(null);
+        setRows([]);
+        setSelectedExpiry("");
+        const nextExpiries = await getExpiries(symbol);
         setExpiries(nextExpiries);
         if (nextExpiries[0]) {
           setSelectedExpiry(nextExpiries[0].value);
@@ -34,7 +41,7 @@ export default function IndexOptionsPage() {
     }
 
     void loadExpiries();
-  }, []);
+  }, [symbol]);
 
   useEffect(() => {
     async function loadChain() {
@@ -45,7 +52,7 @@ export default function IndexOptionsPage() {
       setLoading(true);
       setError(null);
       try {
-        const nextRows = await getOptionChain("NIFTY", selectedExpiry);
+        const nextRows = await getOptionChain(symbol, selectedExpiry);
         setRows(nextRows);
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Failed to load option chain");
@@ -55,16 +62,16 @@ export default function IndexOptionsPage() {
     }
 
     void loadChain();
-  }, [selectedExpiry]);
+  }, [selectedExpiry, symbol]);
 
   return (
     <main className="min-h-screen">
-      <Header title="Index Options" subtitle="NIFTY Option Chain" />
+      <Header title="Index Options" subtitle={`${symbol} Option Chain`} />
       <div className="space-y-4 px-4 py-4 lg:px-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-4">
             <div>
-              <CardTitle>NIFTY Option Chain</CardTitle>
+              <CardTitle>{symbol} Option Chain</CardTitle>
               <p className="text-sm text-zinc-500">Live data from backend API</p>
             </div>
             <ExpiryDropdown value={selectedExpiry} options={expiries} onChange={setSelectedExpiry} />

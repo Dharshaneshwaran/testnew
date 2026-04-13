@@ -38,7 +38,10 @@ interface DhanExpiryPayload {
   status?: string;
 }
 
-const UNDERLYING_MAP: Record<string, { securityId: number; exchangeSegment: string }> = {
+const UNDERLYING_MAP: Record<
+  string,
+  { securityId: number; exchangeSegment: string }
+> = {
   NIFTY: { securityId: 13, exchangeSegment: 'IDX_I' },
   RELIANCE: { securityId: 1333, exchangeSegment: 'NSE_EQ' },
 };
@@ -115,9 +118,12 @@ export class DhanOptionsProvider implements OptionsDataProvider {
         body: JSON.stringify(body),
       });
     } catch (error) {
-      throw new ServiceUnavailableException(`Dhan provider request failed for ${path}`, {
-        cause: error as Error,
-      });
+      throw new ServiceUnavailableException(
+        `Dhan provider request failed for ${path}`,
+        {
+          cause: error as Error,
+        },
+      );
     }
 
     if (!response.ok) {
