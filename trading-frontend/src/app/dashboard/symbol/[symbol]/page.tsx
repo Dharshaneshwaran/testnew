@@ -27,6 +27,7 @@ import { StockMoveAlertButton } from "@/components/watchlist/StockMoveAlertButto
 const RANGE_TABS = ["1D", "5D", "1M", "6M", "YTD", "1Y", "5Y", "MAX"] as const;
 const CONTENT_TABS = ["Overview", "Earnings", "Financials"] as const;
 const RESEARCH_SITES = ["marketsmojo", "Alpha", "Motilal"];
+const INDEX_SYMBOLS = new Set(["NIFTY", "BANKNIFTY", "SENSEX"]);
 
 export default function SymbolResearchPage() {
   const params = useParams<{ symbol: string }>();
@@ -107,7 +108,7 @@ export default function SymbolResearchPage() {
             console.warn(err);
             return null;
           }),
-          getTimeSeries("equity", symbol, {
+          getTimeSeries(isIndexSymbol(symbol) ? "index" : "equity", symbol, {
             range: activeRange.toLowerCase(),
             interval: getRangeInterval(activeRange),
           }).catch((err: unknown) => {
@@ -205,7 +206,7 @@ export default function SymbolResearchPage() {
   const lastUpdatedLabel = research ? formatResearchTimestamp(research.timestamp) : "Loading...";
 
   return (
-    <main className="min-h-screen bg-[#0b0d12] text-white">
+    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <Header title="Research" subtitle="Market research" />
       <div className="flex flex-col min-h-[calc(100vh-85px)]">
         <section className="px-4 py-5 lg:px-7">
@@ -491,6 +492,10 @@ function getRangeInterval(range: (typeof RANGE_TABS)[number]): string {
     case "MAX": return "1mo";
     default:   return "5m";
   }
+}
+
+function isIndexSymbol(symbol: string) {
+  return INDEX_SYMBOLS.has(symbol.toUpperCase());
 }
 
 function StatsColumn({ items }: { items: [string, string][] }) {

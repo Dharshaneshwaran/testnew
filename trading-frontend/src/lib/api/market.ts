@@ -227,15 +227,16 @@ export async function searchMarket(query: string) {
     "NIFTY BANK": "BANKNIFTY",
   };
 
-  return results.map(item => {
+  return results.map((item) => {
     const isDerivativesRoute =
       item.route.startsWith("/dashboard/futures") || item.route.startsWith("/dashboard/options");
 
     if (!isDerivativesRoute && (item.hint.includes("Equity") || item.hint.includes("Index"))) {
+      const resolvedSymbol = symbolMap[item.label] || item.symbol || item.label;
       return { 
         ...item, 
-        route: `/dashboard/symbol/${encodeURIComponent(item.label)}`,
-        symbol: symbolMap[item.label] || item.symbol || item.label,
+        route: `/dashboard/symbol/${encodeURIComponent(resolvedSymbol)}`,
+        symbol: resolvedSymbol,
       };
     }
     return item;

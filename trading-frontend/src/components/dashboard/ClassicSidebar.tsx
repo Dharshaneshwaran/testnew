@@ -51,13 +51,13 @@ export function ClassicSidebar() {
   const removedStocks = defaultStocks.filter(s => !sidebarStocks.includes(s));
 
   return (
-    <aside className="w-80 bg-white/[0.02] border-r border-white/[0.1] overflow-y-auto flex flex-col">
+    <aside className="no-scrollbar w-full max-w-[320px] bg-white/[0.02] border-r border-white/[0.1] overflow-y-auto overflow-x-hidden flex flex-col">
       <div className="p-4 border-b border-white/[0.1] sticky top-0 bg-white/[0.01]">
         <h3 className="text-sm font-semibold text-white/90">Stock List</h3>
         <p className="text-xs text-white/50 mt-1">Drag stocks to dashboard</p>
       </div>
 
-      <div className="flex-1 p-4 space-y-3 overflow-y-auto">
+      <div className="no-scrollbar flex-1 p-4 space-y-3 overflow-y-auto overflow-x-hidden">
         {sidebarStocks.length > 0 ? (
           <>
             <div className="space-y-2">

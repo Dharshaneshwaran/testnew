@@ -145,8 +145,8 @@ export function Sidebar() {
         />
       )}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 shrink-0 border-r border-white/8 bg-[#0d0f14] py-8 overflow-y-auto overflow-x-hidden transition-all duration-300 lg:static lg:block lg:translate-x-0",
-        sidebarCollapsed ? "w-[76px] px-3" : "w-[300px] px-6 sm:w-[360px]",
+        "no-scrollbar fixed inset-y-0 left-0 z-50 shrink-0 border-r border-white/8 bg-[#0d0f14] py-8 overflow-y-auto overflow-x-hidden transition-all duration-300 lg:static lg:block lg:translate-x-0",
+        sidebarCollapsed ? "w-[76px] px-3" : "w-full max-w-[360px] px-6 sm:w-[360px]",
         mobileOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="mb-12 flex items-center justify-between">

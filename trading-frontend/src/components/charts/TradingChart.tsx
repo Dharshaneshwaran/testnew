@@ -13,6 +13,7 @@ import {
   LineSeries,
   LineStyle,
   PriceScaleMode,
+  TickMarkType,
   type IChartApi,
   type IPriceLine,
   type ISeriesApi,
@@ -24,6 +25,7 @@ import { useEffect, useRef } from "react";
 import { PricePoint } from "@/types/market";
 
 export type TradingChartVariant = "area" | "candles" | "line";
+type ChartTheme = "dark" | "light";
 
 type PrimarySeries = ISeriesApi<"Area"> | ISeriesApi<"Candlestick"> | ISeriesApi<"Line">;
 
@@ -41,6 +43,7 @@ export function TradingChart({
   onHoverCandle,
   referencePrice,
   timeZone = "Asia/Kolkata",
+  height = 334,
 }: {
   data: PricePoint[];
   variant?: TradingChartVariant;
@@ -51,6 +54,7 @@ export function TradingChart({
   ) => void;
   referencePrice?: number | null;
   timeZone?: string;
+  height?: number;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
@@ -61,6 +65,9 @@ export function TradingChart({
   const seriesRef = useRef<SeriesHandle | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const dataMetaRef = useRef<{ first: string; last: string; len: number } | null>(null);
+  const referencePriceRef = useRef<number | null>(referencePrice ?? null);
+  const themeRef = useRef<ChartTheme>("dark");
+  const dataRef = useRef<PricePoint[]>(data);
 
   const hoverCallbackRef = useRef<typeof onHoverPrice>(onHoverPrice);
   useEffect(() => {
@@ -73,38 +80,24 @@ export function TradingChart({
   }, [onHoverCandle]);
 
   useEffect(() => {
+    referencePriceRef.current = referencePrice ?? null;
+  }, [referencePrice]);
+
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+
+  useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    const resolvedHeight = Math.max(160, Math.round(height));
+    const initialTheme = getChartTheme();
+    themeRef.current = initialTheme;
 
     const chart = createChart(container, {
       width: container.clientWidth,
-      height: 334,
-      layout: {
-        background: { color: "#10131a" },
-        textColor: "rgba(255,255,255,0.62)",
-        fontFamily: '"Google Sans", "Segoe UI", sans-serif',
-        attributionLogo: false,
-      },
-      grid: {
-        vertLines: { color: "rgba(255,255,255,0.07)" },
-        horzLines: { color: "rgba(255,255,255,0.06)" },
-      },
-      crosshair: {
-        mode: CrosshairMode.Magnet,
-        vertLine: {
-          color: "rgba(255,255,255,0.18)",
-          width: 1,
-          style: LineStyle.Dashed,
-          labelBackgroundColor: "#20232d",
-        },
-        horzLine: {
-          visible: true,
-          color: "rgba(255,255,255,0.18)",
-          width: 1,
-          style: LineStyle.Dashed,
-          labelBackgroundColor: "#20232d",
-        },
-      },
+      height: resolvedHeight,
+      ...getThemeChartOptions(initialTheme),
       leftPriceScale: {
         visible: false,
         borderVisible: false,
@@ -125,6 +118,52 @@ export function TradingChart({
         rightOffset: 2,
         barSpacing: 7,
         minBarSpacing: 2,
+        tickMarkFormatter: (time: Time, tickMarkType: TickMarkType) => {
+          const date = toDate(time);
+          if (!date) return null;
+
+          if (tickMarkType === TickMarkType.Time) {
+            return new Intl.DateTimeFormat("en-IN", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+              timeZone,
+            }).format(date);
+          }
+
+          if (tickMarkType === TickMarkType.DayOfMonth) {
+            return new Intl.DateTimeFormat("en-IN", {
+              day: "2-digit",
+              month: "short",
+              timeZone,
+            }).format(date);
+          }
+
+          if (tickMarkType === TickMarkType.Month) {
+            return new Intl.DateTimeFormat("en-IN", {
+              month: "short",
+              year: "2-digit",
+              timeZone,
+            }).format(date);
+          }
+
+          if (tickMarkType === TickMarkType.Year) {
+            return new Intl.DateTimeFormat("en-IN", {
+              year: "numeric",
+              timeZone,
+            }).format(date);
+          }
+
+          // fallback
+          return new Intl.DateTimeFormat("en-IN", {
+            day: "2-digit",
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+            timeZone,
+          }).format(date);
+        },
       },
       handleScroll: {
         mouseWheel: true,
@@ -154,7 +193,7 @@ export function TradingChart({
 
     chartRef.current = chart;
 
-    const primarySeries = createPrimarySeries(chart, variant);
+    const primarySeries = createPrimarySeries(chart, variant, initialTheme);
     const volumeSeries = chart.addSeries(HistogramSeries, {
       priceScaleId: "volume",
       base: 0,
@@ -277,14 +316,24 @@ export function TradingChart({
     });
 
     const observer = new ResizeObserver(() => {
-      chart.resize(container.clientWidth, 334);
+      chart.resize(container.clientWidth, resolvedHeight);
     });
     observer.observe(container);
     resizeObserverRef.current = observer;
 
-    syncChartData(chart, seriesRef.current, data, referencePrice ?? null, true);
+    syncChartData(chart, seriesRef.current, data, referencePrice ?? null, initialTheme, true);
+
+    const onThemeUpdate = () => {
+      const nextTheme = getChartTheme();
+      themeRef.current = nextTheme;
+      applyChartTheme(chart, seriesRef.current, nextTheme);
+      syncChartData(chart, seriesRef.current, dataRef.current, referencePriceRef.current, nextTheme, false);
+    };
+
+    window.addEventListener("ui-theme-updated", onThemeUpdate);
 
     return () => {
+      window.removeEventListener("ui-theme-updated", onThemeUpdate);
       resizeObserverRef.current?.disconnect();
       resizeObserverRef.current = null;
       seriesRef.current = null;
@@ -292,7 +341,7 @@ export function TradingChart({
       chart.remove();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [height, timeZone]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -303,11 +352,12 @@ export function TradingChart({
     const visibleLogical = chart.timeScale().getVisibleLogicalRange();
     chart.removeSeries(handles.primarySeries as unknown as ISeriesApi<"Area" | "Candlestick" | "Line", Time>);
 
-    handles.primarySeries = createPrimarySeries(chart, variant);
+    const theme = themeRef.current ?? getChartTheme();
+    handles.primarySeries = createPrimarySeries(chart, variant, theme);
     handles.variant = variant;
     handles.referenceLine = null;
 
-    syncChartData(chart, handles, data, referencePrice ?? null, visibleLogical === null);
+    syncChartData(chart, handles, data, referencePrice ?? null, theme, visibleLogical === null);
     if (visibleLogical) {
       chart.timeScale().setVisibleLogicalRange(visibleLogical);
     }
@@ -317,6 +367,7 @@ export function TradingChart({
     const chart = chartRef.current;
     const handles = seriesRef.current;
     if (!chart || !handles) return;
+    const theme = themeRef.current ?? getChartTheme();
 
     const beforeRange = chart.timeScale().getVisibleLogicalRange();
 
@@ -336,7 +387,7 @@ export function TradingChart({
 
     dataMetaRef.current = nextMeta;
 
-    syncChartData(chart, handles, data, referencePrice ?? null, shouldFit);
+    syncChartData(chart, handles, data, referencePrice ?? null, theme, shouldFit);
 
     // If the user is already at the right edge, keep tracking live updates without resetting zoom.
     if (!shouldFit && beforeRange) {
@@ -349,7 +400,7 @@ export function TradingChart({
   }, [data, referencePrice]);
 
   return (
-    <div className="relative h-[334px] w-full rounded-[22px]">
+    <div className="relative w-full rounded-[22px]" style={{ height: Math.max(160, Math.round(height)) }}>
       <div ref={containerRef} className="h-full w-full" />
       <div
         ref={tooltipRef}
@@ -368,6 +419,7 @@ function syncChartData(
   handles: SeriesHandle,
   data: PricePoint[],
   referencePrice: number | null,
+  theme: ChartTheme,
   fitContent: boolean,
 ) {
   const normalized = normalizePricePoints(data);
@@ -379,7 +431,7 @@ function syncChartData(
       (handles.primarySeries as ISeriesApi<"Area"> | ISeriesApi<"Line">).setData([]);
     }
     handles.volumeSeries.setData([]);
-    updateReferenceLine(handles, null);
+    updateReferenceLine(handles, null, theme);
     return;
   }
 
@@ -392,14 +444,14 @@ function syncChartData(
   }
   handles.volumeSeries.setData(rows.volumeData);
 
-  updateReferenceLine(handles, referencePrice);
+  updateReferenceLine(handles, referencePrice, theme);
 
   if (fitContent) {
     chart.timeScale().fitContent();
   }
 }
 
-function updateReferenceLine(handles: SeriesHandle, referencePrice: number | null) {
+function updateReferenceLine(handles: SeriesHandle, referencePrice: number | null, theme: ChartTheme) {
   if (handles.referenceLine) {
     handles.primarySeries.removePriceLine(handles.referenceLine);
     handles.referenceLine = null;
@@ -411,7 +463,7 @@ function updateReferenceLine(handles: SeriesHandle, referencePrice: number | nul
 
   handles.referenceLine = handles.primarySeries.createPriceLine({
     price: referencePrice,
-    color: "rgba(209, 213, 219, 0.65)",
+    color: theme === "light" ? "rgba(71, 85, 105, 0.58)" : "rgba(209, 213, 219, 0.65)",
     lineStyle: LineStyle.Dashed,
     lineWidth: 1,
     axisLabelVisible: false,
@@ -419,7 +471,7 @@ function updateReferenceLine(handles: SeriesHandle, referencePrice: number | nul
   });
 }
 
-function createPrimarySeries(chart: IChartApi, variant: TradingChartVariant): PrimarySeries {
+function createPrimarySeries(chart: IChartApi, variant: TradingChartVariant, theme: ChartTheme): PrimarySeries {
   if (variant === "candles") {
     return chart.addSeries(CandlestickSeries, {
       upColor: "rgba(136, 227, 138, 0.98)",
@@ -439,7 +491,7 @@ function createPrimarySeries(chart: IChartApi, variant: TradingChartVariant): Pr
       color: "#91ec91",
       lineWidth: 2,
       crosshairMarkerRadius: 4,
-      crosshairMarkerBorderColor: "#fff",
+      crosshairMarkerBorderColor: theme === "light" ? "#0b0d12" : "#fff",
       crosshairMarkerBackgroundColor: "#B5F2B5",
       lastValueVisible: true,
       priceLineVisible: true,
@@ -452,12 +504,95 @@ function createPrimarySeries(chart: IChartApi, variant: TradingChartVariant): Pr
     lineWidth: 2,
     topColor: "rgba(136, 227, 138, 0.34)",
     crosshairMarkerRadius: 4,
-    crosshairMarkerBorderColor: "#fff",
+    crosshairMarkerBorderColor: theme === "light" ? "#0b0d12" : "#fff",
     crosshairMarkerBackgroundColor: "#B5F2B5",
     lastValueVisible: true,
     priceLineVisible: true,
     priceFormat: { type: "price", precision: 2, minMove: 0.05 },
   });
+}
+
+function getChartTheme(): ChartTheme {
+  if (typeof document === "undefined") return "dark";
+  return document.documentElement.classList.contains("theme-light") ? "light" : "dark";
+}
+
+function getThemeChartOptions(theme: ChartTheme) {
+  if (theme === "light") {
+    return {
+      layout: {
+        background: { color: "#ffffff" },
+        textColor: "rgba(2, 6, 23, 0.62)",
+        fontFamily: '"Google Sans", "Segoe UI", sans-serif',
+        attributionLogo: false,
+      },
+      grid: {
+        vertLines: { color: "rgba(2, 6, 23, 0.10)" },
+        horzLines: { color: "rgba(2, 6, 23, 0.08)" },
+      },
+      crosshair: {
+        mode: CrosshairMode.Magnet,
+        vertLine: {
+          color: "rgba(2, 6, 23, 0.20)",
+          width: 1,
+          style: LineStyle.Dashed,
+          labelBackgroundColor: "#f1f5f9",
+        },
+        horzLine: {
+          visible: true,
+          color: "rgba(2, 6, 23, 0.20)",
+          width: 1,
+          style: LineStyle.Dashed,
+          labelBackgroundColor: "#f1f5f9",
+        },
+      },
+    } as const;
+  }
+
+  return {
+    layout: {
+      background: { color: "#10131a" },
+      textColor: "rgba(255,255,255,0.62)",
+      fontFamily: '"Google Sans", "Segoe UI", sans-serif',
+      attributionLogo: false,
+    },
+    grid: {
+      vertLines: { color: "rgba(255,255,255,0.07)" },
+      horzLines: { color: "rgba(255,255,255,0.06)" },
+    },
+    crosshair: {
+      mode: CrosshairMode.Magnet,
+      vertLine: {
+        color: "rgba(255,255,255,0.18)",
+        width: 1,
+        style: LineStyle.Dashed,
+        labelBackgroundColor: "#20232d",
+      },
+      horzLine: {
+        visible: true,
+        color: "rgba(255,255,255,0.18)",
+        width: 1,
+        style: LineStyle.Dashed,
+        labelBackgroundColor: "#20232d",
+      },
+    },
+  } as const;
+}
+
+function applyChartTheme(chart: IChartApi, handles: SeriesHandle | null, theme: ChartTheme) {
+  chart.applyOptions(getThemeChartOptions(theme));
+
+  if (!handles) return;
+  if (handles.variant === "line") {
+    (handles.primarySeries as ISeriesApi<"Line">).applyOptions({
+      crosshairMarkerBorderColor: theme === "light" ? "#0b0d12" : "#fff",
+    });
+  }
+  if (handles.variant === "area") {
+    (handles.primarySeries as ISeriesApi<"Area">).applyOptions({
+      crosshairMarkerBorderColor: theme === "light" ? "#0b0d12" : "#fff",
+    });
+  }
 }
 
 function buildChartRows(data: PricePoint[]) {
@@ -562,4 +697,18 @@ function toCandlesFromPoints(data: PricePoint[]) {
 
 function currencySymbol() {
   return "\u20B9";
+}
+
+function toDate(time: Time) {
+  if (typeof time === "number") {
+    const date = new Date(time * 1000);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  if (time && typeof time === "object" && "year" in time && "month" in time && "day" in time) {
+    const date = new Date(Date.UTC(time.year, time.month - 1, time.day));
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  return null;
 }

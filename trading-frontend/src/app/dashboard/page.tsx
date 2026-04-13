@@ -47,14 +47,14 @@ function DashboardSlot({
     <div
       ref={setNodeRef}
       className={cn(
-        "relative flex min-h-[400px] items-center justify-center rounded-2xl border-2 border-dashed transition-all duration-300",
+        "relative flex h-full min-h-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed transition-all duration-300",
         symbol ? "border-transparent bg-transparent" : "border-white/10 bg-white/[0.02] hover:border-white/20",
         isOver && !symbol && "border-blue-500/50 bg-blue-500/5 scale-[0.98]"
       )}
     >
       {symbol ? (
         <div className="h-full w-full">
-          <ClassicStockWidget symbol={symbol} onClose={onClose} refreshInterval={1000} />
+          <ClassicStockWidget symbol={symbol} onClose={onClose} refreshInterval={1000} compact />
         </div>
       ) : (
         <div className="flex flex-col items-center gap-3 text-center">
@@ -158,20 +158,20 @@ export default function DashboardPage() {
   }, [mode, token, REFRESH_RATE]);
 
   return (
-    <main className="min-h-screen bg-[#07080a]">
+    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
       <Header 
         title={mode === "classic" ? "Classic Console" : "Dashboard"} 
         subtitle={mode === "classic" ? "Multi-chart monitoring enabled" : "Indian markets overview"} 
       />
       
       {mode === "classic" ? (
-        <div className="px-4 py-6 lg:px-8">
+        <div className="px-4 py-6 lg:px-8 min-h-[calc(100vh-85px)] flex flex-col">
           <div className="flex items-center gap-3 mb-6">
             <Monitor className="h-5 w-5 text-blue-400" />
-            <h2 className="text-xl font-bold text-white tracking-tight">Active Terminal (4 Stocks Max)</h2>
+            <h2 className="text-xl font-bold text-[var(--foreground)] tracking-tight">Active Terminal (4 Stocks Max)</h2>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="grid flex-1 min-h-0 grid-cols-1 gap-4 md:grid-cols-2 md:grid-rows-2 md:auto-rows-fr">
             {dashboardStocks.map((symbol, idx) => (
               <DashboardSlot 
                 key={idx} 

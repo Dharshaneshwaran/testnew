@@ -241,8 +241,16 @@ export class YahooMarketProvider implements MarketDataProvider {
     const yahooSymbol =
       kind === 'index'
         ? (INDEX_SYMBOL_MAP[normalizedSymbol] ?? normalizedSymbol)
-        : (EQUITY_SYMBOL_MAP[normalizedSymbol] ?? `${normalizedSymbol}.NS`);
-    const result = await this.fetchChart(yahooSymbol, range, interval);
+        : (EQUITY_SYMBOL_MAP[normalizedSymbol] ??
+          INDEX_SYMBOL_MAP[normalizedSymbol] ??
+          `${normalizedSymbol}.NS`);
+    const resolvedRange = this.normalizeRange(range);
+    const resolvedInterval = this.normalizeInterval(interval);
+    const result = await this.fetchChart(
+      yahooSymbol,
+      resolvedRange,
+      resolvedInterval,
+    );
     const timestamps = result?.timestamp ?? [];
     const closes = result?.indicators?.quote?.[0]?.close ?? [];
     const points = timestamps
@@ -314,6 +322,28 @@ export class YahooMarketProvider implements MarketDataProvider {
     }
 
     return result;
+  }
+
+  private normalizeRange(range: string) {
+    const value = (range ?? '').trim().toLowerCase();
+    if (!value) return '1d';
+
+    // Frontend shortcuts -> Yahoo ranges
+    if (value === '1m') return '1mo';
+    if (value === '6m') return '6mo';
+
+    // Accept already-valid Yahoo ranges
+    return value;
+  }
+
+  private normalizeInterval(interval: string) {
+    const value = (interval ?? '').trim().toLowerCase();
+    if (!value) return '30m';
+
+    // Yahoo uses `1h` not `60m` for some intervals, but both often work; keep caller value when possible.
+    if (value === '60m') return '1h';
+
+    return value;
   }
 
   private async fetchQuote(yahooSymbol: string) {

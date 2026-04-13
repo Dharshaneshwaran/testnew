@@ -175,4 +175,3 @@ export function StockMoveAlertButton({ symbol, className }: { symbol: string; cl
     </>
   );
 }
-

@@ -6,6 +6,12 @@
   --border-soft: rgba(255, 255, 255, 0.08);
 }
 
+:root.theme-light {
+  --background: #ffffff;
+  --foreground: #0b0d12;
+  --border-soft: rgba(0, 0, 0, 0.12);
+}
+
 * {
   box-sizing: border-box;
   border-color: var(--border-soft);
@@ -19,11 +25,82 @@ body {
 
 body {
   margin: 0;
-  background: #0b0d12;
+  background: var(--background);
   color: var(--foreground);
   font-family: "Google Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* Light theme (triggered by adding `theme-light` to <html>) */
+html.theme-light body {
+  background: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+html.theme-light [class*="bg-[#0c0d12]"],
+html.theme-light [class*="bg-[#0b0d12]"],
+html.theme-light [class*="bg-[#030507]"],
+html.theme-light [class*="bg-[#0d0f14]"],
+html.theme-light [class*="bg-[#10131a]"],
+html.theme-light [class*="bg-[#13151d]"],
+html.theme-light [class*="bg-zinc-900"],
+html.theme-light [class*="bg-zinc-950"] {
+  background-color: #ffffff !important;
+}
+
+html.theme-light [class*="bg-[#20232d]"],
+html.theme-light [class*="bg-[#1a1c24]"] {
+  background-color: #f8fafc !important;
+}
+
+html.theme-light [class*="bg-[#1a1d27]"] {
+  background-color: rgba(2, 6, 23, 0.06) !important;
+}
+
+html.theme-light [class*="bg-white/["] {
+  background-color: rgba(2, 6, 23, 0.05) !important;
+}
+
+html.theme-light [class*="bg-black/5"],
+html.theme-light [class*="bg-black/10"],
+html.theme-light [class*="bg-black/20"],
+html.theme-light [class*="bg-black/25"],
+html.theme-light [class*="bg-black/30"] {
+  background-color: rgba(2, 6, 23, 0.06) !important;
+}
+
+html.theme-light [class*="border-white"] {
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+html.theme-light [class*="divide-white"] {
+  --tw-divide-opacity: 1 !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html.theme-light [class*="text-white"],
+html.theme-light [class*="text-zinc-100"] {
+  color: rgba(2, 6, 23, 0.92) !important;
+}
+
+html.theme-light [class*="text-white/"],
+html.theme-light [class*="text-zinc-400"] {
+  color: rgba(2, 6, 23, 0.62) !important;
+}
+
+html.theme-light [class*="text-zinc-200"],
+html.theme-light [class*="text-zinc-300"] {
+  color: rgba(2, 6, 23, 0.86) !important;
+}
+
+html.theme-light [class*="text-zinc-500"] {
+  color: rgba(2, 6, 23, 0.52) !important;
+}
+
+html.theme-light input::placeholder,
+html.theme-light textarea::placeholder {
+  color: rgba(2, 6, 23, 0.42) !important;
 }
 
 a {

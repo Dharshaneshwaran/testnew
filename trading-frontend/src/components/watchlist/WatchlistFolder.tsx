@@ -2,6 +2,7 @@ import { AlertTriangle, Check, ChevronDown, ChevronRight, Plus, Search, Trash2, 
 import { useRef, useState } from "react";
 
 import { WatchlistItem } from "@/components/watchlist/WatchlistItem";
+import { FolderMoveAlertButton } from "@/components/watchlist/FolderMoveAlertButton";
 import { WatchlistFolderType } from "@/types/watchlist";
 import { cn } from "@/lib/utils";
 import { searchMarket, type MarketSearchItem } from "@/lib/api/market";
@@ -192,6 +193,11 @@ export function WatchlistFolder({
               >
                 <Plus className="h-5 w-5" />
               </button>
+              <FolderMoveAlertButton
+                folderId={folder.id}
+                folderName={folder.name}
+                symbols={folder.items.map((item) => item.symbol)}
+              />
               <button
                 type="button"
                 onClick={handleDeleteFolder}
@@ -234,7 +240,7 @@ export function WatchlistFolder({
               </div>
 
               {results.length > 0 && (
-                <div className="mt-3 bg-zinc-900/50 border border-white/10 rounded-2xl overflow-hidden shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="relative mt-3 rounded-2xl border border-white/10 bg-zinc-900/50 shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
                   <div className="px-4 py-2.5 text-[11px] font-medium text-zinc-500 uppercase tracking-wider border-b border-white/5 bg-white/[0.02]">
                     {searchQuery ? "Search Results" : "Popular on Google"}
                   </div>
@@ -248,7 +254,14 @@ export function WatchlistFolder({
                         <div className="flex items-center gap-4">
                           <div className="relative">
                             <button
-                              onClick={() => setActiveSelector(showSelector ? null : result.hint)}
+                              type="button"
+                              onClick={() => {
+                                if (!inCurrent) {
+                                  void handleAddToThisFolder(result.hint, result.label, result.symbol);
+                                  return;
+                                }
+                                setActiveSelector(showSelector ? null : result.hint);
+                              }}
                               className={cn(
                                 "flex h-8 w-8 items-center justify-center rounded-full transition-all",
                                 inCurrent 
@@ -267,7 +280,7 @@ export function WatchlistFolder({
                             </button>
 
                             {showSelector && (
-                              <div className="absolute top-full left-0 mt-2 w-56 bg-[#1a1c24] border border-white/10 rounded-xl shadow-2xl z-[100] p-1.5 animate-in fade-in zoom-in-95 duration-150">
+                              <div className="absolute top-full left-0 mt-2 w-56 max-h-72 overflow-y-auto no-scrollbar bg-[#1a1c24] border border-white/10 rounded-xl shadow-2xl z-[1000] p-1.5 animate-in fade-in zoom-in-95 duration-150">
                                 <div className="px-3 py-2 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider border-b border-white/5 mb-1.5">
                                   Add to list
                                 </div>
@@ -301,21 +314,21 @@ export function WatchlistFolder({
             </div>
           )}
 
-          <div className="space-y-0.5">
+          <div className="no-scrollbar overflow-x-hidden px-2">
             {folder.items.length === 0 ? (
               !isEditing && <p className="px-4 py-2 text-sm text-zinc-500 italic">This list is empty</p>
             ) : (
-              folder.items
-                .filter((item, index, self) => 
-                  index === self.findIndex((t) => t.symbol === item.symbol)
-                )
-                .map((item) => (
-                  <WatchlistItem 
-                    key={`${folder.id}-${item.id}`} 
-                    item={item}
-                    onRemove={handleRemove}
-                  />
-                ))
+              <div className="divide-y divide-white/5 rounded-xl border border-white/8 bg-white/[0.02]">
+                {folder.items
+                  .filter((item, index, self) => 
+                    index === self.findIndex((t) => t.symbol === item.symbol)
+                  )
+                  .map((item) => (
+                    <div key={`${folder.id}-${item.id}`} className="px-2 py-1.5">
+                      <WatchlistItem item={item} onRemove={handleRemove} />
+                    </div>
+                  ))}
+              </div>
             )}
           </div>
         </div>

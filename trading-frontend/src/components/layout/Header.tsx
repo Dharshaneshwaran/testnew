@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   BarChart3,
   Check,
@@ -16,6 +16,7 @@ import { useTransition } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useDashboard } from "@/context/DashboardContext";
 import { cn } from "@/lib/utils";
+import { toggleUiTheme } from "@/lib/uiTheme";
 import {
   getIndexQuotes,
   searchMarket,
@@ -41,6 +42,27 @@ export function Header({ title, subtitle }: { title: string; subtitle: string })
   const [tickers, setTickers] = useState<Ticker[]>([]);
   const [isPending, startTransition] = useTransition();
   const normalizedQuery = searchQuery.trim();
+  const classicClickCountRef = useRef(0);
+  const classicLastClickAtRef = useRef(0);
+
+  const handleClassicClick = () => {
+    setMode("classic");
+
+    // Easter-egg: 3 quick clicks on Classic toggles the UI theme (light <-> dark).
+    const now = Date.now();
+    const last = classicLastClickAtRef.current;
+    classicLastClickAtRef.current = now;
+
+    if (!last || now - last > 900) {
+      classicClickCountRef.current = 0;
+    }
+
+    classicClickCountRef.current += 1;
+    if (classicClickCountRef.current >= 3) {
+      classicClickCountRef.current = 0;
+      toggleUiTheme();
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -242,7 +264,7 @@ export function Header({ title, subtitle }: { title: string; subtitle: string })
             <div className="hidden items-center rounded-full border border-white/10 bg-white/[0.02] p-1 lg:flex">
               <button 
                 type="button" 
-                onClick={() => setMode("classic")}
+                onClick={handleClassicClick}
                 className={cn(
                   "rounded-full px-4 py-1.5 text-sm transition-colors",
                   mode === "classic" ? "bg-[#1a1d27] text-[#8ee78f]" : "text-white/75"

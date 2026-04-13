@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { ThemeClassProvider } from "@/components/theme/ThemeClassProvider";
 
 import "./globals.css";
 
@@ -15,7 +16,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="icon" href="/globe.svg" />
       </head>
-      <body className="min-h-screen bg-[#030507] text-zinc-100 antialiased" suppressHydrationWarning>
+      <body className="min-h-screen bg-[var(--background)] text-[var(--foreground)] antialiased" suppressHydrationWarning>
+        <ThemeClassProvider />
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
