@@ -206,12 +206,13 @@ export function TradingChart({
       visible: false,
     });
 
-    seriesRef.current = {
+    const handles: SeriesHandle = {
       variant,
       primarySeries,
       volumeSeries,
       referenceLine: null,
     };
+    seriesRef.current = handles;
 
     chart.subscribeCrosshairMove((param) => {
       const tooltip = tooltipRef.current;
@@ -321,13 +322,15 @@ export function TradingChart({
     observer.observe(container);
     resizeObserverRef.current = observer;
 
-    syncChartData(chart, seriesRef.current, data, referencePrice ?? null, initialTheme, true);
+    syncChartData(chart, handles, data, referencePrice ?? null, initialTheme, true);
 
     const onThemeUpdate = () => {
       const nextTheme = getChartTheme();
       themeRef.current = nextTheme;
-      applyChartTheme(chart, seriesRef.current, nextTheme);
-      syncChartData(chart, seriesRef.current, dataRef.current, referencePriceRef.current, nextTheme, false);
+      const nextHandles = seriesRef.current;
+      if (!nextHandles) return;
+      applyChartTheme(chart, nextHandles, nextTheme);
+      syncChartData(chart, nextHandles, dataRef.current, referencePriceRef.current, nextTheme, false);
     };
 
     window.addEventListener("ui-theme-updated", onThemeUpdate);
@@ -416,12 +419,14 @@ export function TradingChart({
 
 function syncChartData(
   chart: IChartApi,
-  handles: SeriesHandle,
+  handles: SeriesHandle | null,
   data: PricePoint[],
   referencePrice: number | null,
   theme: ChartTheme,
   fitContent: boolean,
 ) {
+  if (!handles) return;
+
   const normalized = normalizePricePoints(data);
 
   if (normalized.length === 0) {

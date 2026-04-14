@@ -65,15 +65,12 @@ export function ClassicStockWidget({
 
       setQuote((prev) => {
         if (!prev) return prev;
-        return {
-          ...prev,
+        const update: Partial<EquityQuote | IndexQuote> = {
           price: message.price,
           change: typeof message.change === "number" ? message.change : prev.change,
           changePercent:
             typeof message.changePercent === "number" ? message.changePercent : prev.changePercent,
           open: typeof message.open === "number" ? message.open : prev.open,
-          previousClose:
-            typeof message.previousClose === "number" ? message.previousClose : prev.previousClose,
           ...(typeof message.volume === "number" ? { volume: message.volume } : null),
           ...(typeof message.dayHigh === "number" ? { dayHigh: message.dayHigh } : null),
           ...(typeof message.dayLow === "number" ? { dayLow: message.dayLow } : null),
@@ -81,6 +78,10 @@ export function ClassicStockWidget({
           ...(typeof message.low === "number" ? { low: message.low } : null),
           timestamp: message.timestamp,
         };
+        if (typeof message.previousClose === "number" && 'previousClose' in prev) {
+          (update as Partial<EquityQuote>).previousClose = message.previousClose;
+        }
+        return { ...prev, ...update };
       });
 
       setChartData((prev) =>
