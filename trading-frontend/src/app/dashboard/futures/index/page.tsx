@@ -8,6 +8,7 @@ import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getFuture, getFutures, getFutureTimeSeries } from "@/lib/api/market";
 import { FuturesStreamMessage, openFuturesStream } from "@/lib/api/marketStream";
+import { parseTimeMs } from "@/lib/time";
 import { FutureContract, PricePoint } from "@/types/market";
 
 export default function IndexFuturesPage() {
@@ -23,6 +24,7 @@ export default function IndexFuturesPage() {
   }>({ ohlc: null, time: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [streamError, setStreamError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -67,6 +69,7 @@ export default function IndexFuturesPage() {
     if (!symbolFilter) return;
 
     let active = true;
+    setStreamError(null);
     const refreshMs = Number(process.env.NEXT_PUBLIC_MARKET_REFRESH_MS ?? 2000);
     const intervalMs = Number.isFinite(refreshMs) ? refreshMs : 2000;
     const source = openFuturesStream({ kind: "index", symbol: symbolFilter, intervalMs });
@@ -80,12 +83,22 @@ export default function IndexFuturesPage() {
         return;
       }
 
+      if (message.type === "error") {
+        setStreamError(message.message || "Live stream error");
+        return;
+      }
       if (message.type !== "future") return;
+      setStreamError(null);
 
       setSelected((prev) => (prev ? { ...prev, ...message } : (message as unknown as FutureContract)));
       setChartData((prev) =>
         upsertChartPoint(prev, { time: message.timestamp, value: message.price }, 60_000),
       );
+    };
+
+    source.onerror = () => {
+      if (!active) return;
+      setStreamError((prev) => prev ?? "Live stream disconnected");
     };
 
     return () => {
@@ -102,6 +115,7 @@ export default function IndexFuturesPage() {
       />
       <div className="space-y-3 px-4 py-4 lg:px-6">
         {error && <p className="text-sm text-red-400">{error}</p>}
+        {streamError && <p className="text-sm text-amber-300">{streamError}</p>}
         {loading && <p className="text-sm text-zinc-500">Loading index futures...</p>}
 
         {symbolFilter ? (
@@ -188,8 +202,8 @@ function upsertChartPoint(points: PricePoint[], incoming: PricePoint, bucketMs: 
     return [incoming];
   }
 
-  const incomingTime = new Date(incoming.time).getTime();
-  if (!Number.isFinite(incomingTime)) {
+  const incomingTime = parseTimeMs(incoming.time);
+  if (incomingTime === null) {
     return points;
   }
 
@@ -199,8 +213,8 @@ function upsertChartPoint(points: PricePoint[], incoming: PricePoint, bucketMs: 
     return [incoming];
   }
 
-  const lastTime = new Date(last.time).getTime();
-  if (!Number.isFinite(lastTime)) {
+  const lastTime = parseTimeMs(last.time);
+  if (lastTime === null) {
     return [...points, incoming];
   }
 

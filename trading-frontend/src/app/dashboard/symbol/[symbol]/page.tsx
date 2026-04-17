@@ -23,6 +23,7 @@ import { addWatchlistItem, getWatchlistFolders, createWatchlistFolder } from "@/
 import { getResearch, getTimeSeries } from "@/lib/api/market";
 import { MarketStreamMessage, openMarketStream } from "@/lib/api/marketStream";
 import { StockMoveAlertButton } from "@/components/watchlist/StockMoveAlertButton";
+import { parseTimeMs } from "@/lib/time";
 
 const RANGE_TABS = ["1D", "5D", "1M", "6M", "YTD", "1Y", "5Y", "MAX"] as const;
 const CONTENT_TABS = ["Overview", "Earnings", "Financials"] as const;
@@ -36,6 +37,7 @@ export default function SymbolResearchPage() {
   const [chartData, setChartData] = useState<PricePoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [streamError, setStreamError] = useState<string | null>(null);
   const [activeContentTab, setActiveContentTab] =
     useState<(typeof CONTENT_TABS)[number]>("Overview");
   const [activeRange, setActiveRange] = useState<(typeof RANGE_TABS)[number]>("1D");
@@ -150,12 +152,14 @@ export default function SymbolResearchPage() {
     if (!symbol) return;
     if (activeRange !== "1D" && activeRange !== "5D") return;
 
+    setStreamError(null);
     const refreshMs = Number(process.env.NEXT_PUBLIC_MARKET_REFRESH_MS ?? 5000);
     const intervalMs = Number.isFinite(refreshMs) ? refreshMs : 5000;
     const interval = getRangeInterval(activeRange);
     const bucketMs = intervalToBucketMs(interval);
 
-    const source = openMarketStream({ kind: "equity", symbol, intervalMs });
+    const streamKind = isIndexSymbol(symbol) ? "index" : "equity";
+    const source = openMarketStream({ kind: streamKind, symbol, intervalMs });
 
     source.onmessage = (event) => {
       let message: MarketStreamMessage;
@@ -165,7 +169,12 @@ export default function SymbolResearchPage() {
         return;
       }
 
+      if (message.type === "error") {
+        setStreamError(message.message || "Live stream error");
+        return;
+      }
       if (message.type !== "quote") return;
+      setStreamError(null);
 
       setResearch((prev) => {
         if (!prev) return prev;
@@ -188,6 +197,10 @@ export default function SymbolResearchPage() {
       setChartData((prev) =>
         upsertChartPoint(prev, { time: message.timestamp, value: message.price }, bucketMs),
       );
+    };
+
+    source.onerror = () => {
+      setStreamError((prev) => prev ?? "Live stream disconnected");
     };
 
     return () => {
@@ -473,6 +486,7 @@ export default function SymbolResearchPage() {
           )}
 
           {error && <p className="pt-4 text-sm text-red-400">{error}</p>}
+          {streamError && <p className="pt-2 text-sm text-amber-300">{streamError}</p>}
         </section>
 
       </div>
@@ -623,8 +637,8 @@ function upsertChartPoint(points: PricePoint[], incoming: PricePoint, bucketMs: 
     return [incoming];
   }
 
-  const incomingTime = new Date(incoming.time).getTime();
-  if (!Number.isFinite(incomingTime)) {
+  const incomingTime = parseTimeMs(incoming.time);
+  if (incomingTime === null) {
     return points;
   }
 
@@ -634,8 +648,8 @@ function upsertChartPoint(points: PricePoint[], incoming: PricePoint, bucketMs: 
     return [incoming];
   }
 
-  const lastTime = new Date(last.time).getTime();
-  if (!Number.isFinite(lastTime)) {
+  const lastTime = parseTimeMs(last.time);
+  if (lastTime === null) {
     return [...points, incoming];
   }
 

@@ -5,6 +5,7 @@ import { X, ArrowUpRight, ArrowDownRight, Activity } from "lucide-react";
 import { TradingChart } from "@/components/charts/TradingChart";
 import { getEquityQuote, getIndexQuote, getTimeSeries, type EquityQuote, type IndexQuote } from "@/lib/api/market";
 import { MarketStreamMessage, openMarketStream } from "@/lib/api/marketStream";
+import { parseTimeMs } from "@/lib/time";
 import { PricePoint } from "@/types/market";
 import { cn } from "@/lib/utils";
 
@@ -221,8 +222,8 @@ function upsertChartPoint(points: PricePoint[], incoming: PricePoint, bucketMs: 
     return [incoming];
   }
 
-  const incomingTime = new Date(incoming.time).getTime();
-  if (!Number.isFinite(incomingTime)) {
+  const incomingTime = parseTimeMs(incoming.time);
+  if (incomingTime === null) {
     return points;
   }
 
@@ -232,8 +233,8 @@ function upsertChartPoint(points: PricePoint[], incoming: PricePoint, bucketMs: 
     return [incoming];
   }
 
-  const lastTime = new Date(last.time).getTime();
-  if (!Number.isFinite(lastTime)) {
+  const lastTime = parseTimeMs(last.time);
+  if (lastTime === null) {
     return [...points, incoming];
   }
 

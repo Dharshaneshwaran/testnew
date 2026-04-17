@@ -1,5 +1,31 @@
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'http://localhost:4000';
+function normalizeApiBaseUrl(raw: string | undefined) {
+  const trimmed = raw?.trim();
+  if (!trimmed) {
+    return "http://localhost:4000";
+  }
+
+  const withoutTrailingSlash = trimmed.replace(/\/+$/, "");
+
+  if (/^https?:\/\//i.test(withoutTrailingSlash)) {
+    return withoutTrailingSlash;
+  }
+
+  if (/^\/\//.test(withoutTrailingSlash)) {
+    return `https:${withoutTrailingSlash}`;
+  }
+
+  // Allow entering just a host (e.g. trading-backend.onrender.com).
+  // Use http for local hosts, https for everything else.
+  const isLocalHost =
+    /^localhost(?::\d+)?$/i.test(withoutTrailingSlash) ||
+    /^127\.0\.0\.1(?::\d+)?$/.test(withoutTrailingSlash) ||
+    /^0\.0\.0\.0(?::\d+)?$/.test(withoutTrailingSlash) ||
+    /^\d{1,3}(\.\d{1,3}){3}(?::\d+)?$/.test(withoutTrailingSlash);
+
+  return `${isLocalHost ? "http" : "https"}://${withoutTrailingSlash}`;
+}
+
+export const API_BASE_URL = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL);
 
 export const AUTH_TOKEN_KEY = 'tradeboard_access_token';
 export const AUTH_UNAUTHORIZED_EVENT = 'tradeboard:unauthorized';
@@ -48,7 +74,10 @@ export async function apiRequest<T>(
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const resolvedPath = path.startsWith("/") ? path : `/${path}`;
+  const url = new URL(resolvedPath, API_BASE_URL);
+
+  const response = await fetch(url.toString(), {
     ...init,
     headers,
     cache: 'no-store',
@@ -77,4 +106,9 @@ export async function apiRequest<T>(
   }
 
   return (await response.json()) as T;
+}
+
+export function buildApiUrl(path: string) {
+  const resolvedPath = path.startsWith("/") ? path : `/${path}`;
+  return new URL(resolvedPath, API_BASE_URL).toString();
 }

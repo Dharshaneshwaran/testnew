@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "@/lib/api/client";
+import { buildApiUrl } from "@/lib/api/client";
 
 export type MarketStreamKind = "equity" | "index";
 
@@ -33,8 +33,9 @@ export function openMarketStream(input: {
   intervalMs?: number;
 }) {
   const url = new URL(
-    `/market/stream/${encodeURIComponent(input.kind)}/${encodeURIComponent(input.symbol)}`,
-    API_BASE_URL,
+    buildApiUrl(
+      `/market/stream/${encodeURIComponent(input.kind)}/${encodeURIComponent(input.symbol)}`,
+    ),
   );
   if (typeof input.intervalMs === "number" && Number.isFinite(input.intervalMs)) {
     url.searchParams.set("intervalMs", String(Math.round(input.intervalMs)));
@@ -68,8 +69,9 @@ export function openFuturesStream(input: {
   intervalMs?: number;
 }) {
   const url = new URL(
-    `/market/stream/futures/${encodeURIComponent(input.kind)}/${encodeURIComponent(input.symbol)}`,
-    API_BASE_URL,
+    buildApiUrl(
+      `/market/stream/futures/${encodeURIComponent(input.kind)}/${encodeURIComponent(input.symbol)}`,
+    ),
   );
   if (typeof input.intervalMs === "number" && Number.isFinite(input.intervalMs)) {
     url.searchParams.set("intervalMs", String(Math.round(input.intervalMs)));

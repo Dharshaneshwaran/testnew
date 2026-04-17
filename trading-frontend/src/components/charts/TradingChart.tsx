@@ -22,6 +22,7 @@ import {
 } from "lightweight-charts";
 import { useEffect, useRef } from "react";
 
+import { parseTimeMs } from "@/lib/time";
 import { PricePoint } from "@/types/market";
 
 export type TradingChartVariant = "area" | "candles" | "line";
@@ -175,6 +176,7 @@ export function TradingChart({
         axisDoubleClickReset: true,
         mouseWheel: true,
         pinch: true,
+        axisPressedMouseMove: true,
       },
       localization: {
         priceFormatter: (price: number) => price.toFixed(2),
@@ -404,7 +406,7 @@ export function TradingChart({
 
   return (
     <div className="relative w-full rounded-[22px]" style={{ height: Math.max(160, Math.round(height)) }}>
-      <div ref={containerRef} className="h-full w-full" />
+      <div ref={containerRef} className="h-full w-full touch-none" />
       <div
         ref={tooltipRef}
         className="pointer-events-none absolute z-50 rounded-2xl border border-white/10 bg-[#20232d]/95 px-5 py-4 shadow-2xl backdrop-blur"
@@ -622,15 +624,16 @@ function buildChartRows(data: PricePoint[]) {
 }
 
 function toChartTime(time: string, index: number) {
-  const parsed = Math.floor(new Date(time).getTime() / 1000);
+  const timeMs = parseTimeMs(time);
+  const parsed = timeMs ? Math.floor(timeMs / 1000) : Number.NaN;
   return (Number.isFinite(parsed) && parsed > 0 ? parsed : index + 1) as UTCTimestamp;
 }
 
 function normalizePricePoints(data: PricePoint[]) {
   const rows = data
     .map((point, index) => {
-      const timeMs = new Date(point.time).getTime();
-      if (!Number.isFinite(timeMs) || timeMs <= 0) {
+      const timeMs = parseTimeMs(point.time);
+      if (timeMs === null) {
         return null;
       }
       if (typeof point.value !== "number" || !Number.isFinite(point.value)) {
@@ -658,7 +661,8 @@ function normalizePricePoints(data: PricePoint[]) {
       continue;
     }
 
-    const lastSec = Math.floor(new Date(last.time).getTime() / 1000);
+    const lastTimeMs = parseTimeMs(last.time);
+    const lastSec = lastTimeMs === null ? Number.NaN : Math.floor(lastTimeMs / 1000);
     if (lastSec === row.second) {
       // overwrite duplicates within the same second (keeps series strictly ascending)
       result[result.length - 1] = { time: row.time, value: row.value };

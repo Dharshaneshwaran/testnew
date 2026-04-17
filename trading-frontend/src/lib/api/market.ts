@@ -8,7 +8,9 @@ import {
   Ticker,
 } from '@/types/market';
 
-const ENABLE_MARKET_MOCKS = process.env.NEXT_PUBLIC_ENABLE_MARKET_MOCKS === 'true';
+const ENABLE_MARKET_MOCKS =
+  process.env.NODE_ENV !== "production" &&
+  process.env.NEXT_PUBLIC_ENABLE_MARKET_MOCKS === "true";
 
 export interface EquityQuote {
   symbol: string;

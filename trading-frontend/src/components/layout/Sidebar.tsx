@@ -9,6 +9,8 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useDashboard } from "@/context/DashboardContext";
 import { MiniSparkline } from "@/components/charts/MiniSparkline";
 import { getEquityQuote, getSectors, getTimeSeries } from "@/lib/api/market";
+import { MarketStreamMessage, openMarketStream } from "@/lib/api/marketStream";
+import { parseTimeMs } from "@/lib/time";
 import { createWatchlistFolder, getWatchlistFolders, deleteAllWatchlistFolders } from "@/lib/api/watchlist";
 import type { PricePoint, SectorCard } from "@/types/market";
 import type { WatchlistFolderType } from "@/types/watchlist";
@@ -31,6 +33,7 @@ export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [watchlistOpen, setWatchlistOpen] = useState(true);
   const [sectorsOpen, setSectorsOpen] = useState(true);
+  const sectorSymbolKey = sectorRows.map((row) => row.symbol).join("|");
 
   const refreshWatchlists = async () => {
     if (!token) return;
@@ -135,6 +138,64 @@ export function Sidebar() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!sectorSymbolKey) {
+      return;
+    }
+
+    const refreshMs = Number(process.env.NEXT_PUBLIC_MARKET_REFRESH_MS ?? 5000);
+    const intervalMs = Number.isFinite(refreshMs) ? refreshMs : 5000;
+
+    const symbols = sectorSymbolKey.split("|").filter(Boolean);
+
+    const sources = symbols.map((symbol) => {
+      const source = openMarketStream({ kind: "equity", symbol, intervalMs });
+
+      source.onmessage = (event) => {
+        let message: MarketStreamMessage;
+        try {
+          message = JSON.parse(event.data) as MarketStreamMessage;
+        } catch {
+          return;
+        }
+
+        if (message.type !== "quote") {
+          return;
+        }
+
+        setSectorRows((prev) =>
+          prev.map((existing) => {
+            if (existing.symbol !== message.symbol) {
+              return existing;
+            }
+
+            const updatedSparkline = upsertChartPoint(
+              existing.sparkline,
+              { time: message.timestamp, value: message.price },
+              60_000,
+            );
+
+            return {
+              ...existing,
+              price: message.price,
+              changePercent:
+                typeof message.changePercent === "number" ? message.changePercent : existing.changePercent,
+              sparkline: updatedSparkline,
+            };
+          }),
+        );
+      };
+
+      return source;
+    });
+
+    return () => {
+      for (const source of sources) {
+        source.close();
+      }
+    };
+  }, [sectorSymbolKey]);
 
   return (
     <>
@@ -336,7 +397,7 @@ async function hydrateSectorRow(sector: SectorCard): Promise<LiveSectorRow | nul
   try {
     const [quote, sparkline] = await Promise.all([
       getEquityQuote(symbol),
-      getTimeSeries("equity", symbol, { range: "1d", interval: "30m" }),
+      getTimeSeries("equity", symbol, { range: "1d", interval: "5m" }),
     ]);
 
     return {
@@ -349,6 +410,48 @@ async function hydrateSectorRow(sector: SectorCard): Promise<LiveSectorRow | nul
   } catch {
     return null;
   }
+}
+
+function upsertChartPoint(points: PricePoint[], incoming: PricePoint, bucketMs: number) {
+  if (points.length === 0) {
+    return [incoming];
+  }
+
+  const incomingTime = parseTimeMs(incoming.time);
+  if (incomingTime === null) {
+    return points;
+  }
+
+  const lastIndex = points.length - 1;
+  const last = points[lastIndex];
+  if (!last) {
+    return [incoming];
+  }
+
+  const lastTime = parseTimeMs(last.time);
+  if (lastTime === null) {
+    return [...points, incoming];
+  }
+
+  const incomingBucket = Math.floor(incomingTime / bucketMs);
+  const lastBucket = Math.floor(lastTime / bucketMs);
+
+  if (incomingTime < lastTime) {
+    if (incomingBucket <= lastBucket) {
+      const next = [...points];
+      next[lastIndex] = { time: last.time, value: incoming.value };
+      return next;
+    }
+    return points;
+  }
+
+  if (incomingBucket === lastBucket) {
+    const next = [...points];
+    next[lastIndex] = incoming;
+    return next;
+  }
+
+  return [...points, incoming];
 }
 
 function formatPrice(value: number) {
