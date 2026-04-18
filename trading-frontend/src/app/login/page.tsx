@@ -106,14 +106,45 @@ export default function LoginPage() {
               />
             </label>
 
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && (
+              <p className="page-transition text-sm text-red-400" aria-live="polite">
+                {error}
+              </p>
+            )}
 
             <Button
               type="submit"
               disabled={loading}
               className="w-full bg-emerald-500/90 font-medium text-black hover:bg-emerald-400 disabled:opacity-60"
             >
-              {loading ? "Please wait..." : isRegisterMode ? "Create Account" : "Enter Dashboard"}
+              {loading ? (
+                <span className="inline-flex items-center gap-2">
+                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                    />
+                    <path
+                      className="opacity-75"
+                      d="M4 12a8 8 0 0 1 8-8"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <span>Please wait…</span>
+                </span>
+              ) : isRegisterMode ? (
+                "Create Account"
+              ) : (
+                "Enter Dashboard"
+              )}
             </Button>
           </form>
 

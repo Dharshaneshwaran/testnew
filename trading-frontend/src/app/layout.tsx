@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { PageTransition } from "@/components/layout/PageTransition";
 import { ThemeClassProvider } from "@/components/theme/ThemeClassProvider";
 
 import "./globals.css";
@@ -18,7 +19,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen bg-[var(--background)] text-[var(--foreground)] antialiased" suppressHydrationWarning>
         <ThemeClassProvider />
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <PageTransition className="min-h-screen">{children}</PageTransition>
+        </AuthProvider>
       </body>
     </html>
   );
