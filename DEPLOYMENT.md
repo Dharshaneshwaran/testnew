@@ -26,9 +26,9 @@ Set these **Environment Variables** in Render:
 - `CORS_ORIGIN` = your Vercel URL(s)
   - single: `https://your-app.vercel.app`
   - multiple: `https://a.vercel.app,https://b.vercel.app`
+  - if omitted in `production`, the backend will allow all origins (`*`)
 
 Required (already handled by `render.yaml`):
 
 - `DATABASE_URL` (from the Render database)
 - `JWT_SECRET` (auto-generated)
-
