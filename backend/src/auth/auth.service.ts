@@ -55,6 +55,23 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
+    const adminEmail = (process.env.ADMIN_EMAIL || 'dharshan@gmail.com').trim();
+    const adminPassword = process.env.ADMIN_PASSWORD || '12345678';
+
+    const isAdminLogin =
+      adminEmail.length > 0 &&
+      dto.email.toLowerCase() === adminEmail.toLowerCase() &&
+      dto.password === adminPassword;
+
+    if (isAdminLogin) {
+      const passwordHash = await bcrypt.hash(adminPassword, 10);
+      const user = await this.usersService.upsertAdminUser({
+        email: adminEmail,
+        passwordHash,
+      });
+      return this.createAuthResponse(user);
+    }
+
     const user = await this.usersService.findByEmail(dto.email);
     if (!user) {
       throw new UnauthorizedException('Invalid email or password');
@@ -69,14 +86,7 @@ export class AuthService {
       throw new ForbiddenException('Account pending admin approval');
     }
 
-    return this.createAuthResponse({
-      id: user.id,
-      email: user.email,
-      name: user.name ?? null,
-      isAdmin: user.isAdmin,
-      isApproved: user.isApproved,
-      approvedAt: user.approvedAt ?? null,
-    });
+    return this.createAuthResponse(user);
   }
 
   async profile(userId: string) {

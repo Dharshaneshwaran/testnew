@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Expand, ListPlus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { WatchlistFolder } from "@/components/watchlist/WatchlistFolder";
@@ -24,7 +25,7 @@ type LiveSectorRow = {
 };
 
 export function Sidebar() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { mode, sidebarCollapsed, setSidebarCollapsed } = useDashboard();
   const [watchlistFolders, setWatchlistFolders] = useState<WatchlistFolderType[]>([]);
   const [sectorRows, setSectorRows] = useState<LiveSectorRow[]>([]);
@@ -34,6 +35,7 @@ export function Sidebar() {
   const [watchlistOpen, setWatchlistOpen] = useState(true);
   const [sectorsOpen, setSectorsOpen] = useState(true);
   const sectorSymbolKey = sectorRows.map((row) => row.symbol).join("|");
+  const isAdmin = Boolean(user?.isAdmin);
 
   const refreshWatchlists = async () => {
     if (!token) return;
@@ -381,6 +383,18 @@ export function Sidebar() {
                 </div>
               )}
             </section>
+
+            {isAdmin ? (
+              <section className="pt-10">
+                <div className="mt-4 h-px bg-white/10" />
+                <Link
+                  href="/dashboard/admin"
+                  className="mt-6 block rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-3 text-sm font-medium text-white/80 transition hover:bg-white/[0.05] hover:text-white"
+                >
+                  Admin approvals
+                </Link>
+              </section>
+            ) : null}
           </>
         )}
     </aside>

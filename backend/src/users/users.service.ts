@@ -88,4 +88,32 @@ export class UsersService {
       },
     });
   }
+
+  upsertAdminUser(input: { email: string; passwordHash: string }) {
+    return this.prisma.user.upsert({
+      where: { email: input.email },
+      update: {
+        passwordHash: input.passwordHash,
+        isAdmin: true,
+        isApproved: true,
+        approvedAt: new Date(),
+      },
+      create: {
+        email: input.email,
+        name: 'Admin',
+        passwordHash: input.passwordHash,
+        isAdmin: true,
+        isApproved: true,
+        approvedAt: new Date(),
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        isAdmin: true,
+        isApproved: true,
+        approvedAt: true,
+      },
+    });
+  }
 }
