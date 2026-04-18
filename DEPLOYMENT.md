@@ -28,6 +28,9 @@ Set these **Environment Variables** in Render:
   - multiple: `https://a.vercel.app,https://b.vercel.app`
   - if omitted in `production`, the backend will allow all origins (`*`)
 
+- `ADMIN_EMAIL` = admin email (defaults to `dharshan@gmail.com` if not set)
+- `ADMIN_PASSWORD` = admin password (defaults to `12345678` if not set)
+
 Required (already handled by `render.yaml`):
 
 - `DATABASE_URL` (from the Render database)

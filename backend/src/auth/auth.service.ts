@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -18,9 +19,19 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
+    const adminEmail = (process.env.ADMIN_EMAIL || 'dharshan@gmail.com').trim();
+    const adminPassword = process.env.ADMIN_PASSWORD || '12345678';
+
     const existing = await this.usersService.findByEmail(dto.email);
     if (existing) {
       throw new ConflictException('Email is already registered');
+    }
+
+    const isAdminRegistration =
+      adminEmail.length > 0 && dto.email.toLowerCase() === adminEmail.toLowerCase();
+
+    if (isAdminRegistration && dto.password !== adminPassword) {
+      throw new ForbiddenException('Invalid admin registration password');
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
@@ -28,9 +39,19 @@ export class AuthService {
       email: dto.email,
       name: dto.name,
       passwordHash,
+      isAdmin: isAdminRegistration,
+      isApproved: isAdminRegistration,
+      approvedAt: isAdminRegistration ? new Date() : null,
     });
 
-    return this.createAuthResponse(user.id, user.email, user.name);
+    if (user.isAdmin) {
+      return this.createAuthResponse(user);
+    }
+
+    return {
+      status: 'pending_approval',
+      message: 'Registration successful. Awaiting admin approval.',
+    };
   }
 
   async login(dto: LoginDto) {
@@ -44,7 +65,18 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    return this.createAuthResponse(user.id, user.email, user.name);
+    if (!user.isApproved && !user.isAdmin) {
+      throw new ForbiddenException('Account pending admin approval');
+    }
+
+    return this.createAuthResponse({
+      id: user.id,
+      email: user.email,
+      name: user.name ?? null,
+      isAdmin: user.isAdmin,
+      isApproved: user.isApproved,
+      approvedAt: user.approvedAt ?? null,
+    });
   }
 
   async profile(userId: string) {
@@ -56,22 +88,28 @@ export class AuthService {
     return user;
   }
 
-  private createAuthResponse(
-    userId: string,
-    email: string,
-    name?: string | null,
-  ) {
+  private createAuthResponse(user: {
+    id: string;
+    email: string;
+    name: string | null;
+    isAdmin: boolean;
+    isApproved: boolean;
+    approvedAt: Date | null;
+  }) {
     const token = this.jwtService.sign({
-      sub: userId,
-      email,
+      sub: user.id,
+      email: user.email,
     });
 
     return {
       accessToken: token,
       user: {
-        id: userId,
-        email,
-        name: name ?? null,
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        isAdmin: user.isAdmin,
+        isApproved: user.isApproved,
+        approvedAt: user.approvedAt,
       },
     };
   }

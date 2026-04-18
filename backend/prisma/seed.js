@@ -15,6 +15,32 @@ async function main() {
   });
 
   try {
+    const adminEmail = (process.env.ADMIN_EMAIL || "dharshan@gmail.com").trim();
+    const adminPassword = process.env.ADMIN_PASSWORD || "12345678";
+    const adminName = process.env.ADMIN_NAME || "Admin";
+
+    if (adminEmail) {
+      const adminPasswordHash = await bcrypt.hash(adminPassword, 10);
+      await prisma.user.upsert({
+        where: { email: adminEmail },
+        update: {
+          name: adminName,
+          passwordHash: adminPasswordHash,
+          isAdmin: true,
+          isApproved: true,
+          approvedAt: new Date(),
+        },
+        create: {
+          email: adminEmail,
+          name: adminName,
+          passwordHash: adminPasswordHash,
+          isAdmin: true,
+          isApproved: true,
+          approvedAt: new Date(),
+        },
+      });
+    }
+
     const email = process.env.SEED_USER_EMAIL || "demo@tradeboard.pro";
     const password = process.env.SEED_USER_PASSWORD || "demo1234";
     const name = process.env.SEED_USER_NAME || "Demo Trader";
@@ -25,11 +51,13 @@ async function main() {
       update: {
         name,
         passwordHash,
+        isApproved: true,
       },
       create: {
         email,
         name,
         passwordHash,
+        isApproved: true,
       },
     });
 
@@ -81,6 +109,12 @@ async function main() {
     console.log(
       JSON.stringify(
         {
+          adminUser: adminEmail
+            ? {
+                email: adminEmail,
+                password: adminPassword,
+              }
+            : null,
           seededUser: {
             email,
             password,

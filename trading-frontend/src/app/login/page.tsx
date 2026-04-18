@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -29,21 +30,28 @@ export default function LoginPage() {
     event.preventDefault();
     setLoading(true);
     setError(null);
+    setNotice(null);
 
     try {
-      const response = isRegisterMode
-        ? await register({ email, password, name: name || undefined })
-        : await login({ email, password });
+      if (isRegisterMode) {
+        const response = await register({ email, password, name: name || undefined });
 
-      console.log('Auth response:', response);
-      
-      if (!response || !response.accessToken || !response.user) {
-        throw new Error('Invalid response from server');
+        if ("accessToken" in response) {
+          loginToSession(response);
+          router.push("/dashboard");
+          router.refresh();
+          return;
+        }
+
+        setNotice(response.message);
+        setIsRegisterMode(false);
+        setPassword("");
+        setLoading(false);
+        return;
       }
-      
+
+      const response = await login({ email, password });
       loginToSession(response);
-      
-      // Don't use setTimeout, just redirect immediately since loginToSession updates state synchronously
       router.push("/dashboard");
       router.refresh();
     } catch (submitError) {
@@ -106,6 +114,12 @@ export default function LoginPage() {
               />
             </label>
 
+            {notice && (
+              <p className="page-transition rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-zinc-200" aria-live="polite">
+                {notice}
+              </p>
+            )}
+
             {error && (
               <p className="page-transition text-sm text-red-400" aria-live="polite">
                 {error}
@@ -150,7 +164,11 @@ export default function LoginPage() {
 
           <button
             type="button"
-            onClick={() => setIsRegisterMode((prev) => !prev)}
+            onClick={() => {
+              setIsRegisterMode((prev) => !prev);
+              setError(null);
+              setNotice(null);
+            }}
             className="w-full text-center text-sm text-zinc-400 transition hover:text-zinc-200"
           >
             {isRegisterMode

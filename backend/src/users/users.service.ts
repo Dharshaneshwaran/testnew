@@ -19,19 +19,72 @@ export class UsersService {
         id: true,
         email: true,
         name: true,
+        isAdmin: true,
+        isApproved: true,
+        approvedAt: true,
         createdAt: true,
       },
     });
   }
 
-  createUser(input: { email: string; passwordHash: string; name?: string }) {
+  createUser(input: {
+    email: string;
+    passwordHash: string;
+    name?: string;
+    isAdmin?: boolean;
+    isApproved?: boolean;
+    approvedAt?: Date | null;
+  }) {
     return this.prisma.user.create({
-      data: input,
+      data: {
+        email: input.email,
+        passwordHash: input.passwordHash,
+        name: input.name,
+        isAdmin: input.isAdmin ?? false,
+        isApproved: input.isApproved ?? false,
+        approvedAt: input.approvedAt ?? null,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        isAdmin: true,
+        isApproved: true,
+        approvedAt: true,
+        createdAt: true,
+      },
+    });
+  }
+
+  listPendingApproval() {
+    return this.prisma.user.findMany({
+      where: {
+        isApproved: false,
+        isAdmin: false,
+      },
+      orderBy: { createdAt: 'asc' },
       select: {
         id: true,
         email: true,
         name: true,
         createdAt: true,
+      },
+    });
+  }
+
+  approveUser(userId: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        isApproved: true,
+        approvedAt: new Date(),
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        isApproved: true,
+        approvedAt: true,
       },
     });
   }
